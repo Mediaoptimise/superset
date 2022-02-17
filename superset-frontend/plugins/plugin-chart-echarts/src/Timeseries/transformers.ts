@@ -50,7 +50,7 @@ import {
 } from 'echarts/types/src/component/marker/MarkAreaModel';
 import { MarkLine1DDataItemOption } from 'echarts/types/src/component/marker/MarkLineModel';
 
-import { extractForecastSeriesContext } from '../utils/prophet';
+import { extractForecastSeriesContext } from '../utils/forecast';
 import { ForecastSeriesEnum, LegendOrientation } from '../types';
 import { EchartsTimeseriesSeriesType } from './types';
 
@@ -83,6 +83,7 @@ export function transformSeries(
     showValueIndexes?: number[];
     thresholdValues?: number[];
     richTooltip?: boolean;
+    seriesKey?: OptionName;
   },
 ): SeriesOption | undefined {
   const { name } = series;
@@ -103,6 +104,7 @@ export function transformSeries(
     showValueIndexes = [],
     thresholdValues = [],
     richTooltip,
+    seriesKey,
   } = opts;
   const contexts = seriesContexts[name || ''] || [];
   const hasForecast =
@@ -147,8 +149,9 @@ export function transformSeries(
   } else {
     plotType = seriesType === 'bar' ? 'bar' : 'line';
   }
+  // forcing the colorScale to return a different color for same metrics across different queries
   const itemStyle = {
-    color: colorScale(forecastSeries.name),
+    color: colorScale(seriesKey || forecastSeries.name),
     opacity,
   };
   let emphasis = {};
