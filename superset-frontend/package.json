@@ -129,6 +129,7 @@
     "lodash-es": "^4.17.21",
     "match-sorter": "^6.1.0",
     "memoize-one": "^5.1.1",
+    "mo-echarts-bar": "file:plugins/mediaoptimise-vizs/mo-echarts-bar",
     "moment": "^2.26.0",
     "moment-timezone": "^0.5.33",
     "mousetrap": "^1.6.1",
