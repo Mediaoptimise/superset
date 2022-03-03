@@ -180,6 +180,18 @@ const config: ControlPanelConfig = {
         ],
         [
           {
+            name: 'stackSeries',
+            config: {
+              type: 'CheckboxControl',
+              label: t('Stack'),
+              renderTrigger: true,
+              default: false,
+              description: t('Stack Bars'),
+            },
+          },
+        ],
+        [
+          {
             name: 'seriesLabelsShow',
             config: {
               type: 'CheckboxControl',
@@ -251,6 +263,24 @@ const config: ControlPanelConfig = {
         ],
         [
           {
+            name: 'legendOrientation',
+            config: {
+              type: 'SelectControl',
+              label: t('Legend Orientation'),
+              default: 'top',
+              choices: [
+                ['top', 'Top'],
+                ['bottom', 'Bottom'],
+                ['left', 'Left'],
+                ['right', 'Right'],
+              ],
+              renderTrigger: true,
+              description: t('Legend Position'),
+            },
+          },
+        ],
+        [
+          {
             name: 'number_format',
             config: {
               type: 'SelectControl',
@@ -261,7 +291,59 @@ const config: ControlPanelConfig = {
               description: D3_FORMAT_DOCS,
             },
           },
-        ]
+        ],
+        [
+          {
+            name: 'marginTop',
+            config: {
+              type: 'TextControl',
+              default: '5%',
+              renderTrigger: true,
+              // ^ this makes it apply instantaneously, without triggering a "run query" button
+              label: t('Margin Top'),
+              description: t("Margin Top in % or px or 'top', 'middle', or 'bottom'"),
+            },
+          },
+        ],
+        [
+          {
+            name: 'marginBottom',
+            config: {
+              type: 'TextControl',
+              default: '5%',
+              renderTrigger: true,
+              // ^ this makes it apply instantaneously, without triggering a "run query" button
+              label: t('Margin Bottom'),
+              description: t('Margin Bottom in %'),
+            },
+          },
+        ],
+        [
+          {
+            name: 'marginRight',
+            config: {
+              type: 'TextControl',
+              default: '5%',
+              renderTrigger: true,
+              // ^ this makes it apply instantaneously, without triggering a "run query" button
+              label: t('Margin Right'),
+              description: t('Margin Right in %, or px (10% or 20)'),
+            },
+          },
+        ],
+        [
+          {
+            name: 'marginLeft',
+            config: {
+              type: 'TextControl',
+              default: '5%',
+              renderTrigger: true,
+              // ^ this makes it apply instantaneously, without triggering a "run query" button
+              label: t('Margin Left'),
+              description: t("Margin LEFT in %,px or 'left', 'center', or 'right'"),
+            },
+          },
+        ],
       ],
     },
   ],

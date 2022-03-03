@@ -66,6 +66,12 @@ export default function transformProps(chartProps: ChartProps) {
     numberFormat,
     colorScheme,
     showTooltip,
+    stackSeries,
+    marginTop,
+    marginBottom,
+    marginRight,
+    marginLeft,
+    legendOrientation,
   } = formData;
 
   const data = queriesData[0].data as TimeseriesDataRecord[];
@@ -82,6 +88,12 @@ export default function transformProps(chartProps: ChartProps) {
     seriesLabelsFormat,
     colorScheme,
     showTooltip,
+    stackSeries,
+    marginTop,
+    marginBottom,
+    marginRight,
+    marginLeft,
+    legendOrientation
   );
 
   return {
@@ -103,7 +115,13 @@ function buildEchartOptions(
   numberFormat: string,
   seriesLabelsFormat: string,
   colorScheme: string,
-  showTooltip: boolean
+  showTooltip: boolean,
+  stackSeries: boolean,
+  marginTop: string,
+  marginBottom: string,
+  marginRight: string,
+  marginLeft: string,
+  legendOrientation: string,
 ) {
   const colorScale = CategoricalColorNamespace.getScale(colorScheme);
 
@@ -152,6 +170,7 @@ function buildEchartOptions(
         x: cols,
         y: null,
       };
+  const stackSettings = stackSeries? {stack: 'totals'}: {};
 
   const singleSeriesConfig = {
     name: {},
@@ -167,7 +186,9 @@ function buildEchartOptions(
     itemStyle: {
       color: 'auto',
     },
+    ...stackSettings
   };
+
 
   const allSeriesConfigs: any = [];
   dimensions.forEach(dim => {
@@ -186,17 +207,62 @@ function buildEchartOptions(
     }
   });
 
+  let legendOptions = legendOrientationBuilder(legendOrientation);
+
   const chartOptions = {
     dataset: {
       dimensions,
       source: data,
     },
-    legend: { show: showLegend }, 
-    tooltip: { show: showTooltip },
+    legend: { 
+              show: showLegend ,
+              ...legendOptions
+            }, 
+    tooltip: { 
+      show: showTooltip,
+      valueFormatter: (value:any) => formatNumber(numberFormat, value)
+     },
     yAxis: { ...yAxisAsCategories },
     xAxis: { ...xAxisAsCategories },
     series: allSeriesConfigs,
+    grid: {
+      top: marginTop,
+      bottom: marginBottom,
+      right: marginRight,
+      left: marginLeft
+    },
   };
 
   return chartOptions;
+}
+
+function legendOrientationBuilder(legendOrientation: string){
+
+  const legend = {
+    orient: ['top', 'bottom'].includes(legendOrientation) 
+            ? 'horizontal'
+            : 'vertical',
+  }
+  let options = {}
+
+  switch (legendOrientation) {
+    case 'left':
+      options = {'left': 0 };
+      break;
+    case 'bottom':
+      options = {'bottom': 0 };
+      break;
+    case 'top':
+    case 'right':
+    default:
+      options = {
+        'right': 0,
+        'top': 0
+      }
+      break;
+  }
+
+  return {...legend, ...options}
+
+  
 }
