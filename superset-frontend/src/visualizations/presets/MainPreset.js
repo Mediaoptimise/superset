@@ -41,6 +41,7 @@ import TreemapChartPlugin from '@superset-ui/legacy-plugin-chart-treemap';
 import { WordCloudChartPlugin } from '@superset-ui/plugin-chart-word-cloud';
 import WorldMapChartPlugin from '@superset-ui/legacy-plugin-chart-world-map';
 import { MoEchartsBar } from 'mo-echarts-bar';
+import { MoEchartsPie } from 'mo-echarts-pie';
 import {
   AreaChartPlugin,
   BarChartPlugin,
@@ -163,6 +164,9 @@ export default class MainPreset extends Preset {
         }),
         new MoEchartsBar().configure({
           key: 'mo_echarts_bar',
+        }),
+        new MoEchartsPie().configure({
+          key: 'mo_echarts_pie',
         }),
         new SelectFilterPlugin().configure({ key: 'filter_select' }),
         new RangeFilterPlugin().configure({ key: 'filter_range' }),
