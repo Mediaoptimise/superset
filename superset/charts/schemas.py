@@ -33,7 +33,6 @@ from superset.utils.core import (
     FilterOperator,
     PostProcessingBoxplotWhiskerType,
     PostProcessingContributionOrientation,
-    TimeRangeEndpoint,
 )
 
 if TYPE_CHECKING:
@@ -210,6 +209,8 @@ class ChartPostSchema(Schema):
     certification_details = fields.String(
         description=certification_details_description, allow_none=True
     )
+    is_managed_externally = fields.Boolean(allow_none=True, default=False)
+    external_url = fields.String(allow_none=True)
 
 
 class ChartPutSchema(Schema):
@@ -251,6 +252,8 @@ class ChartPutSchema(Schema):
     certification_details = fields.String(
         description=certification_details_description, allow_none=True
     )
+    is_managed_externally = fields.Boolean(allow_none=True, default=False)
+    external_url = fields.String(allow_none=True)
 
 
 class ChartGetDatasourceObjectDataResponseSchema(Schema):
@@ -768,6 +771,7 @@ class ChartDataPostProcessingOperationSchema(Schema):
                 "diff",
                 "compare",
                 "resample",
+                "flatten",
             )
         ),
         example="aggregate",
@@ -822,7 +826,6 @@ class ChartDataFilterSchema(Schema):
 
 class ChartDataExtrasSchema(Schema):
 
-    time_range_endpoints = fields.List(EnumField(TimeRangeEndpoint, by_value=True))
     relative_start = fields.String(
         description="Start time for relative time deltas. "
         'Default: `config["DEFAULT_RELATIVE_START_TIME"]`',
@@ -1301,6 +1304,8 @@ class ImportV1ChartSchema(Schema):
     uuid = fields.UUID(required=True)
     version = fields.String(required=True)
     dataset_uuid = fields.UUID(required=True)
+    is_managed_externally = fields.Boolean(allow_none=True, default=False)
+    external_url = fields.String(allow_none=True)
 
 
 CHART_SCHEMAS = (

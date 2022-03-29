@@ -84,7 +84,7 @@ class TestChartApi(SupersetTestCase, ApiOwnersTestCaseMixin, InsertChartMixin):
             charts = []
             admin = self.get_user("admin")
             for cx in range(CHARTS_FIXTURE_COUNT - 1):
-                charts.append(self.insert_chart(f"name{cx}", [admin.id], 1,))
+                charts.append(self.insert_chart(f"name{cx}", [admin.id], 1))
             fav_charts = []
             for cx in range(round(CHARTS_FIXTURE_COUNT / 2)):
                 fav_star = FavStar(
@@ -749,6 +749,7 @@ class TestChartApi(SupersetTestCase, ApiOwnersTestCaseMixin, InsertChartMixin):
             "slice_name": "title",
             "viz_type": None,
             "query_context": None,
+            "is_managed_externally": False,
         }
         data = json.loads(rv.data.decode("utf-8"))
         self.assertEqual(data["result"], expected_result)

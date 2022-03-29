@@ -19,17 +19,10 @@ import dataclasses
 from typing import Any, Dict, List, Optional
 
 from superset.common.chart_data import ChartDataResultType
-from superset.utils.core import AnnotationType, DTTM_ALIAS, TimeRangeEndpoint
+from superset.utils.core import AnnotationType, DTTM_ALIAS
 
 query_birth_names = {
-    "extras": {
-        "where": "",
-        "time_range_endpoints": (
-            TimeRangeEndpoint.INCLUSIVE,
-            TimeRangeEndpoint.EXCLUSIVE,
-        ),
-        "time_grain_sqla": "P1D",
-    },
+    "extras": {"where": "", "time_grain_sqla": "P1D"},
     "columns": ["name"],
     "metrics": [{"label": "sum__num"}],
     "orderby": [("sum__num", False)],
@@ -179,18 +172,21 @@ POSTPROCESSING_OPERATIONS = {
         {
             "operation": "aggregate",
             "options": {
-                "groupby": ["gender"],
+                "groupby": ["name"],
                 "aggregates": {
                     "q1": {
                         "operator": "percentile",
                         "column": "sum__num",
-                        "options": {"q": 25},
+                        # todo: rename "interpolation" to "method" when we updated
+                        #  numpy.
+                        #  https://numpy.org/doc/stable/reference/generated/numpy.percentile.html
+                        "options": {"q": 25, "interpolation": "lower"},
                     },
                     "median": {"operator": "median", "column": "sum__num",},
                 },
             },
         },
-        {"operation": "sort", "options": {"columns": {"q1": False, "gender": True},},},
+        {"operation": "sort", "options": {"columns": {"q1": False, "name": True},},},
     ]
 }
 

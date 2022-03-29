@@ -27,10 +27,12 @@ import {
   css,
 } from '@superset-ui/core';
 import Chart from 'src/types/Chart';
+import { intersection } from 'lodash';
 import rison from 'rison';
 import { getClientErrorObject } from 'src/utils/getClientErrorObject';
 import { FetchDataConfig } from 'src/components/ListView';
 import SupersetText from 'src/utils/textUtils';
+import findPermission from 'src/dashboard/util/findPermission';
 import { Dashboard, Filters } from './types';
 
 // Modifies the rison encoding slightly to match the backend's rison encoding/decoding. Applies globally.
@@ -162,20 +164,17 @@ export const getEditedObjects = (userId: string | number) => {
 export const getUserOwnedObjects = (
   userId: string | number,
   resource: string,
-) => {
-  const filters = {
-    created: [
-      {
-        col: 'created_by',
-        opr: 'rel_o_m',
-        value: `${userId}`,
-      },
-    ],
-  };
-  return SupersetClient.get({
-    endpoint: `/api/v1/${resource}/?q=${getParams(filters.created)}`,
+  filters: Array<Filters> = [
+    {
+      col: 'created_by',
+      opr: 'rel_o_m',
+      value: `${userId}`,
+    },
+  ],
+) =>
+  SupersetClient.get({
+    endpoint: `/api/v1/${resource}/?q=${getParams(filters)}`,
   }).then(res => res.json?.result);
-};
 
 export const getRecentAcitivtyObjs = (
   userId: string | number,
@@ -409,3 +408,31 @@ export const hasTerminalValidation = (errors: Record<string, any>[]) =>
             isNeedsPassword(payload) || isAlreadyExists(payload),
         ),
   );
+
+export const checkUploadExtensions = (
+  perm: Array<string>,
+  cons: Array<string>,
+) => {
+  if (perm !== undefined) {
+    return intersection(perm, cons).length > 0;
+  }
+  return false;
+};
+
+export const uploadUserPerms = (
+  roles: Record<string, [string, string][]>,
+  csvExt: Array<string>,
+  colExt: Array<string>,
+  excelExt: Array<string>,
+  allowedExt: Array<string>,
+) => ({
+  canUploadCSV:
+    findPermission('can_this_form_get', 'CsvToDatabaseView', roles) &&
+    checkUploadExtensions(csvExt, allowedExt),
+  canUploadColumnar:
+    checkUploadExtensions(colExt, allowedExt) &&
+    findPermission('can_this_form_get', 'ColumnarToDatabaseView', roles),
+  canUploadExcel:
+    checkUploadExtensions(excelExt, allowedExt) &&
+    findPermission('can_this_form_get', 'ExcelToDatabaseView', roles),
+});

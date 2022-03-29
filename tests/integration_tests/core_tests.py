@@ -336,7 +336,6 @@ class TestCore(SupersetTestCase):
             "metric": "sum__value",
             "row_limit": 5000,
             "slice_id": slice_id,
-            "time_range_endpoints": ["inclusive", "exclusive"],
         }
         # Changing name and save as a new slice
         resp = self.client.post(
@@ -359,7 +358,6 @@ class TestCore(SupersetTestCase):
             "row_limit": 5000,
             "slice_id": new_slice_id,
             "time_range": "now",
-            "time_range_endpoints": ["inclusive", "exclusive"],
         }
         # Setting the name back to its original name by overwriting new slice
         self.client.post(
@@ -429,17 +427,6 @@ class TestCore(SupersetTestCase):
             print(f"[{name}]/[{method}]: {url}")
             resp = self.client.get(url)
             self.assertEqual(resp.status_code, 200)
-
-    def test_tablemodelview_list(self):
-        self.login(username="admin")
-
-        url = "/tablemodelview/list/"
-        resp = self.get_resp(url)
-
-        # assert that a table is listed
-        table = db.session.query(SqlaTable).first()
-        assert table.name in resp
-        assert "/superset/explore/table/{}".format(table.id) in resp
 
     def test_add_slice(self):
         self.login(username="admin")
@@ -691,30 +678,6 @@ class TestCore(SupersetTestCase):
         ck = db.session.query(CacheKey).order_by(CacheKey.id.desc()).first()
         assert ck.datasource_uid == f"{girls_slice.table.id}__table"
         app.config["STORE_CACHE_KEYS_IN_METADATA_DB"] = store_cache_keys
-
-    def test_shortner(self):
-        self.login(username="admin")
-        data = (
-            "//superset/explore/table/1/?viz_type=sankey&groupby=source&"
-            "groupby=target&metric=sum__value&row_limit=5000&where=&having=&"
-            "flt_col_0=source&flt_op_0=in&flt_eq_0=&slice_id=78&slice_name="
-            "Energy+Sankey&collapsed_fieldsets=&action=&datasource_name="
-            "energy_usage&datasource_id=1&datasource_type=table&"
-            "previous_viz_type=sankey"
-        )
-        resp = self.client.post("/r/shortner/", data=dict(data=data))
-        assert re.search(r"\/r\/[0-9]+", resp.data.decode("utf-8"))
-
-    def test_shortner_invalid(self):
-        self.login(username="admin")
-        invalid_urls = [
-            "hhttp://invalid.com",
-            "hhttps://invalid.com",
-            "www.invalid.com",
-        ]
-        for invalid_url in invalid_urls:
-            resp = self.client.post("/r/shortner/", data=dict(data=invalid_url))
-            assert resp.status_code == 400
 
     def test_redirect_invalid(self):
         model_url = models.Url(url="hhttp://invalid.com")
@@ -1002,7 +965,6 @@ class TestCore(SupersetTestCase):
         form_data = {
             "datasource": f"{tbl_id}__table",
             "viz_type": "dist_bar",
-            "time_range_endpoints": ["inclusive", "exclusive"],
             "granularity_sqla": "ds",
             "time_range": "No filter",
             "metrics": ["count"],
@@ -1026,7 +988,6 @@ class TestCore(SupersetTestCase):
             "datasource": f"{tbl_id}__table",
             "viz_type": "dist_bar",
             "url_params": {},
-            "time_range_endpoints": ["inclusive", "exclusive"],
             "granularity_sqla": "ds",
             "time_range": 'DATEADD(DATETIME("2021-01-22T00:00:00"), -100, year) : 2021-01-22T00:00:00',
             "metrics": [
@@ -1125,7 +1086,6 @@ class TestCore(SupersetTestCase):
         form_data = {
             "datasource": f"{tbl_id}__table",
             "viz_type": "dist_bar",
-            "time_range_endpoints": ["inclusive", "exclusive"],
             "granularity_sqla": "ds",
             "time_range": "No filter",
             "metrics": ["count"],
@@ -1156,7 +1116,6 @@ class TestCore(SupersetTestCase):
         form_data = {
             "datasource": f"{tbl_id}__table",
             "viz_type": "dist_bar",
-            "time_range_endpoints": ["inclusive", "exclusive"],
             "granularity_sqla": "ds",
             "time_range": "No filter",
             "metrics": ["count"],
@@ -1185,7 +1144,6 @@ class TestCore(SupersetTestCase):
                 "form_data": {
                     "datasource": f"{tbl_id}__table",
                     "viz_type": "dist_bar",
-                    "time_range_endpoints": ["inclusive", "exclusive"],
                     "granularity_sqla": "ds",
                     "time_range": "No filter",
                     "metrics": ["count"],
@@ -1224,7 +1182,6 @@ class TestCore(SupersetTestCase):
                 "form_data": {
                     "datasource": f"{tbl_id}__table",
                     "viz_type": "dist_bar",
-                    "time_range_endpoints": ["inclusive", "exclusive"],
                     "granularity_sqla": "ds",
                     "time_range": "No filter",
                     "metrics": ["count"],
@@ -1297,8 +1254,10 @@ class TestCore(SupersetTestCase):
         self.assertEqual(resp.status_code, 403)
 
     @mock.patch("superset.views.core.results_backend_use_msgpack", False)
-    @mock.patch("superset.views.core.results_backend")
-    def test_display_limit(self, mock_results_backend):
+    def test_display_limit(self):
+        from superset.views import core
+
+        core.results_backend = mock.Mock()
         self.login()
 
         data = [{"col_0": i} for i in range(100)]
@@ -1327,7 +1286,7 @@ class TestCore(SupersetTestCase):
         app.config["RESULTS_BACKEND_USE_MSGPACK"] = False
         serialized_payload = sql_lab._serialize_payload(payload, False)
         compressed = utils.zlib_compress(serialized_payload)
-        mock_results_backend.get.return_value = compressed
+        core.results_backend.get.return_value = compressed
 
         with mock.patch("superset.views.core.db") as mock_superset_db:
             mock_superset_db.session.query().filter_by().one_or_none.return_value = (
@@ -1548,6 +1507,29 @@ class TestCore(SupersetTestCase):
         extra["allows_virtual_table_explore"] = "trash value"
         database.extra = json.dumps(extra)
         self.assertEqual(database.allows_virtual_table_explore, True)
+
+    def test_data_preview_visibility(self):
+        # test that default visibility is allowed
+        database = utils.get_example_database()
+        self.assertEqual(database.disable_data_preview, False)
+
+        # test that visibility is disabled when extra is set to true
+        extra = database.get_extra()
+        extra["disable_data_preview"] = True
+        database.extra = json.dumps(extra)
+        self.assertEqual(database.disable_data_preview, True)
+
+        # test that visibility is enabled when extra is set to false
+        extra = database.get_extra()
+        extra["disable_data_preview"] = False
+        database.extra = json.dumps(extra)
+        self.assertEqual(database.disable_data_preview, False)
+
+        # test that visibility is not broken with bad values
+        extra = database.get_extra()
+        extra["disable_data_preview"] = "trash value"
+        database.extra = json.dumps(extra)
+        self.assertEqual(database.disable_data_preview, False)
 
     def test_explore_database_id(self):
         database = superset.utils.database.get_example_database()
