@@ -14,21 +14,25 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-
-# pylint: disable=invalid-name, too-many-lines
+# pylint: disable=invalid-name, redefined-outer-name, unused-argument, protected-access, too-many-lines
 
 import unittest
-from typing import Set
+from typing import Optional, Set
 
 import pytest
 import sqlparse
+from pytest_mock import MockerFixture
+from sqlalchemy import text
+from sqlparse.sql import Identifier, Token, TokenList
+from sqlparse.tokens import Name
 
 from superset.exceptions import QueryClauseValidationException
 from superset.sql_parse import (
     add_table_name,
+    extract_table_references,
+    get_rls_for_table,
     has_table_query,
     insert_rls,
-    matches_table_name,
     ParsedQuery,
     sanitize_clause,
     strip_comments_from_sql,
@@ -262,13 +266,9 @@ def test_extract_tables_illdefined() -> None:
     assert extract_tables("SELECT * FROM catalogname..tbname") == set()
 
 
-@unittest.skip("Requires sqlparse>=3.1")
 def test_extract_tables_show_tables_from() -> None:
     """
     Test ``SHOW TABLES FROM``.
-
-    This is currently broken in the pinned version of sqlparse, and fixed in
-    ``sqlparse>=3.1``. However, ``sqlparse==3.1`` breaks some sql formatting.
     """
     assert extract_tables("SHOW TABLES FROM s1 like '%order%'") == set()
 
@@ -1013,15 +1013,15 @@ def test_unknown_select() -> None:
     Test that `is_select` works when sqlparse fails to identify the type.
     """
     sql = "WITH foo AS(SELECT 1) SELECT 1"
-    assert sqlparse.parse(sql)[0].get_type() == "UNKNOWN"
+    assert sqlparse.parse(sql)[0].get_type() == "SELECT"
     assert ParsedQuery(sql).is_select()
 
     sql = "WITH foo AS(SELECT 1) INSERT INTO my_table (a) VALUES (1)"
-    assert sqlparse.parse(sql)[0].get_type() == "UNKNOWN"
+    assert sqlparse.parse(sql)[0].get_type() == "INSERT"
     assert not ParsedQuery(sql).is_select()
 
     sql = "WITH foo AS(SELECT 1) DELETE FROM my_table"
-    assert sqlparse.parse(sql)[0].get_type() == "UNKNOWN"
+    assert sqlparse.parse(sql)[0].get_type() == "DELETE"
     assert not ParsedQuery(sql).is_select()
 
 
@@ -1104,15 +1104,6 @@ SELECT * FROM birth_names LIMIT 1
 def test_sqlparse_formatting():
     """
     Test that ``from_unixtime`` is formatted correctly.
-
-    ``sqlparse==0.3.1`` has a bug and removes space between ``from`` and
-    ``from_unixtime``, resulting in::
-
-        SELECT extract(HOUR
-        fromfrom_unixtime(hour_ts)
-        AT TIME ZONE 'America/Los_Angeles')
-        from table
-
     """
     assert sqlparse.format(
         "SELECT extract(HOUR from from_unixtime(hour_ts) "
@@ -1391,13 +1382,39 @@ def test_has_table_query(sql: str, expected: bool) -> None:
         ),
     ],
 )
-def test_insert_rls(sql: str, table: str, rls: str, expected: str) -> None:
+def test_insert_rls(
+    mocker: MockerFixture, sql: str, table: str, rls: str, expected: str
+) -> None:
     """
     Insert into a statement a given RLS condition associated with a table.
     """
-    statement = sqlparse.parse(sql)[0]
     condition = sqlparse.parse(rls)[0]
-    assert str(insert_rls(statement, table, condition)).strip() == expected.strip()
+    add_table_name(condition, table)
+
+    # pylint: disable=unused-argument
+    def get_rls_for_table(
+        candidate: Token,
+        database_id: int,
+        default_schema: str,
+    ) -> Optional[TokenList]:
+        """
+        Return the RLS ``condition`` if ``candidate`` matches ``table``.
+        """
+        # compare ignoring schema
+        for left, right in zip(str(candidate).split(".")[::-1], table.split(".")[::-1]):
+            if left != right:
+                return None
+        return condition
+
+    mocker.patch("superset.sql_parse.get_rls_for_table", new=get_rls_for_table)
+
+    statement = sqlparse.parse(sql)[0]
+    assert (
+        str(
+            insert_rls(token_list=statement, database_id=1, default_schema="my_schema")
+        ).strip()
+        == expected.strip()
+    )
 
 
 @pytest.mark.parametrize(
@@ -1415,16 +1432,77 @@ def test_add_table_name(rls: str, table: str, expected: str) -> None:
     assert str(condition) == expected
 
 
-@pytest.mark.parametrize(
-    "candidate,table,expected",
-    [
-        ("table", "table", True),
-        ("schema.table", "table", True),
-        ("table", "schema.table", True),
-        ('schema."my table"', '"my table"', True),
-        ('schema."my.table"', '"my.table"', True),
-    ],
-)
-def test_matches_table_name(candidate: str, table: str, expected: bool) -> None:
-    token = sqlparse.parse(candidate)[0].tokens[0]
-    assert matches_table_name(token, table) == expected
+def test_get_rls_for_table(mocker: MockerFixture) -> None:
+    """
+    Tests for ``get_rls_for_table``.
+    """
+    candidate = Identifier([Token(Name, "some_table")])
+    db = mocker.patch("superset.db")
+    dataset = db.session.query().filter().one_or_none()
+    dataset.__str__.return_value = "some_table"
+
+    dataset.get_sqla_row_level_filters.return_value = [text("organization_id = 1")]
+    assert (
+        str(get_rls_for_table(candidate, 1, "public"))
+        == "some_table.organization_id = 1"
+    )
+
+    dataset.get_sqla_row_level_filters.return_value = [
+        text("organization_id = 1"),
+        text("foo = 'bar'"),
+    ]
+    assert (
+        str(get_rls_for_table(candidate, 1, "public"))
+        == "some_table.organization_id = 1 AND some_table.foo = 'bar'"
+    )
+
+    dataset.get_sqla_row_level_filters.return_value = []
+    assert get_rls_for_table(candidate, 1, "public") is None
+
+
+def test_extract_table_references(mocker: MockerFixture) -> None:
+    """
+    Test the ``extract_table_references`` helper function.
+    """
+    assert extract_table_references("SELECT 1", "trino") == set()
+    assert extract_table_references("SELECT 1 FROM some_table", "trino") == {
+        Table(table="some_table", schema=None, catalog=None)
+    }
+    assert extract_table_references("SELECT {{ jinja }} FROM some_table", "trino") == {
+        Table(table="some_table", schema=None, catalog=None)
+    }
+    assert extract_table_references(
+        "SELECT 1 FROM some_catalog.some_schema.some_table", "trino"
+    ) == {Table(table="some_table", schema="some_schema", catalog="some_catalog")}
+
+    # with identifier quotes
+    assert extract_table_references(
+        "SELECT 1 FROM `some_catalog`.`some_schema`.`some_table`", "mysql"
+    ) == {Table(table="some_table", schema="some_schema", catalog="some_catalog")}
+    assert extract_table_references(
+        'SELECT 1 FROM "some_catalog".some_schema."some_table"', "trino"
+    ) == {Table(table="some_table", schema="some_schema", catalog="some_catalog")}
+
+    assert extract_table_references(
+        "SELECT * FROM some_table JOIN other_table ON some_table.id = other_table.id",
+        "trino",
+    ) == {
+        Table(table="some_table", schema=None, catalog=None),
+        Table(table="other_table", schema=None, catalog=None),
+    }
+
+    # test falling back to sqlparse
+    logger = mocker.patch("superset.sql_parse.logger")
+    sql = "SELECT * FROM table UNION ALL SELECT * FROM other_table"
+    assert extract_table_references(
+        sql,
+        "trino",
+    ) == {Table(table="other_table", schema=None, catalog=None)}
+    logger.warning.assert_called_once()
+
+    logger = mocker.patch("superset.migrations.shared.utils.logger")
+    sql = "SELECT * FROM table UNION ALL SELECT * FROM other_table"
+    assert extract_table_references(sql, "trino", show_warning=False) == {
+        Table(table="other_table", schema=None, catalog=None)
+    }
+    logger.warning.assert_not_called()

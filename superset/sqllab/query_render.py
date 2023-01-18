@@ -35,7 +35,7 @@ if TYPE_CHECKING:
     from superset.jinja_context import BaseTemplateProcessor
     from superset.sqllab.sqllab_execution_context import SqlJsonExecutionContext
 
-PARAMETER_MISSING_ERR = (
+PARAMETER_MISSING_ERR = __(
     "Please check your template parameters for syntax errors and make sure "
     "they match across your SQL query and Set Parameters. Then, try running "
     "your query again."
@@ -100,7 +100,12 @@ class SqlQueryRenderImpl(SqlQueryRender):
             extra={
                 "undefined_parameters": list(undefined_parameters),
                 "template_parameters": execution_context.template_params,
-                "issue_codes": [{"code": 1006, "message": MSG_OF_1006,}],
+                "issue_codes": [
+                    {
+                        "code": 1006,
+                        "message": MSG_OF_1006,
+                    }
+                ],
             },
         )
 

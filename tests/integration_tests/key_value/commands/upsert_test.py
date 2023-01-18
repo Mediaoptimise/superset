@@ -24,6 +24,7 @@ from flask.ctx import AppContext
 from flask_appbuilder.security.sqla.models import User
 
 from superset.extensions import db
+from superset.utils.core import override_user
 from tests.integration_tests.key_value.commands.fixtures import (
     admin,
     ID_KEY,
@@ -40,14 +41,20 @@ NEW_VALUE = "new value"
 
 
 def test_upsert_id_entry(
-    app_context: AppContext, admin: User, key_value_entry: KeyValueEntry,
+    app_context: AppContext,
+    admin: User,
+    key_value_entry: KeyValueEntry,
 ) -> None:
     from superset.key_value.commands.upsert import UpsertKeyValueCommand
     from superset.key_value.models import KeyValueEntry
 
-    key = UpsertKeyValueCommand(
-        actor=admin, resource=RESOURCE, key=ID_KEY, value=NEW_VALUE,
-    ).run()
+    with override_user(admin):
+        key = UpsertKeyValueCommand(
+            resource=RESOURCE,
+            key=ID_KEY,
+            value=NEW_VALUE,
+        ).run()
+    assert key is not None
     assert key.id == ID_KEY
     entry = (
         db.session.query(KeyValueEntry).filter_by(id=int(ID_KEY)).autoflush(False).one()
@@ -57,14 +64,20 @@ def test_upsert_id_entry(
 
 
 def test_upsert_uuid_entry(
-    app_context: AppContext, admin: User, key_value_entry: KeyValueEntry,
+    app_context: AppContext,
+    admin: User,
+    key_value_entry: KeyValueEntry,
 ) -> None:
     from superset.key_value.commands.upsert import UpsertKeyValueCommand
     from superset.key_value.models import KeyValueEntry
 
-    key = UpsertKeyValueCommand(
-        actor=admin, resource=RESOURCE, key=UUID_KEY, value=NEW_VALUE,
-    ).run()
+    with override_user(admin):
+        key = UpsertKeyValueCommand(
+            resource=RESOURCE,
+            key=UUID_KEY,
+            value=NEW_VALUE,
+        ).run()
+    assert key is not None
     assert key.uuid == UUID_KEY
     entry = (
         db.session.query(KeyValueEntry).filter_by(uuid=UUID_KEY).autoflush(False).one()
@@ -77,9 +90,13 @@ def test_upsert_missing_entry(app_context: AppContext, admin: User) -> None:
     from superset.key_value.commands.upsert import UpsertKeyValueCommand
     from superset.key_value.models import KeyValueEntry
 
-    key = UpsertKeyValueCommand(
-        actor=admin, resource=RESOURCE, key=456, value=NEW_VALUE,
-    ).run()
+    with override_user(admin):
+        key = UpsertKeyValueCommand(
+            resource=RESOURCE,
+            key=456,
+            value=NEW_VALUE,
+        ).run()
+    assert key is not None
     assert key.id == 456
     db.session.query(KeyValueEntry).filter_by(id=456).delete()
     db.session.commit()

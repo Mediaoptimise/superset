@@ -90,7 +90,10 @@ def test_rolling():
     # incorrect rolling type
     with pytest.raises(InvalidPostProcessingError):
         pp.rolling(
-            df=timeseries_df, columns={"y": "y"}, rolling_type="abc", window=2,
+            df=timeseries_df,
+            columns={"y": "y"},
+            rolling_type="abc",
+            window=2,
         )
 
     # incorrect rolling type options
@@ -110,8 +113,6 @@ def test_rolling_should_empty_df():
         index=["dttm"],
         columns=["country"],
         aggregates={"sum_metric": {"operator": "sum"}},
-        flatten_columns=False,
-        reset_index=False,
     )
     rolling_df = pp.rolling(
         df=pivot_df,
@@ -129,8 +130,6 @@ def test_rolling_after_pivot_with_single_metric():
         index=["dttm"],
         columns=["country"],
         aggregates={"sum_metric": {"operator": "sum"}},
-        flatten_columns=False,
-        reset_index=False,
     )
     """
                    sum_metric
@@ -179,8 +178,6 @@ def test_rolling_after_pivot_with_multiple_metrics():
             "sum_metric": {"operator": "sum"},
             "count_metric": {"operator": "sum"},
         },
-        flatten_columns=False,
-        reset_index=False,
     )
     """
                count_metric    sum_metric
@@ -191,7 +188,10 @@ def test_rolling_after_pivot_with_multiple_metrics():
     """
     rolling_df = pp.rolling(
         df=pivot_df,
-        columns={"count_metric": "count_metric", "sum_metric": "sum_metric",},
+        columns={
+            "count_metric": "count_metric",
+            "sum_metric": "sum_metric",
+        },
         rolling_type="sum",
         window=2,
         min_periods=0,

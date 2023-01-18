@@ -93,6 +93,31 @@
       }
     },
     "schemas": {
+      "AdvancedDataTypeSchema": {
+        "properties": {
+          "display_value": {
+            "description": "The string representation of the parsed values",
+            "type": "string"
+          },
+          "error_message": {
+            "type": "string"
+          },
+          "valid_filter_operators": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "values": {
+            "items": {
+              "description": "parsed value (can be any value)",
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "type": "object"
+      },
       "AnnotationLayer": {
         "properties": {
           "annotationType": {
@@ -522,6 +547,17 @@
         },
         "type": "object"
       },
+      "AvailableDomainsSchema": {
+        "properties": {
+          "domains": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "type": "object"
+      },
       "CacheInvalidationRequestSchema": {
         "properties": {
           "datasource_uids": {
@@ -780,8 +816,12 @@
           "type": {
             "description": "Datasource type",
             "enum": [
-              "druid",
-              "table"
+              "sl_table",
+              "table",
+              "dataset",
+              "query",
+              "saved_query",
+              "view"
             ],
             "type": "string"
           }
@@ -793,17 +833,12 @@
       },
       "ChartDataExtras": {
         "properties": {
-          "druid_time_origin": {
-            "description": "Starting point for time grain counting on legacy Druid datasources. Used to change e.g. Monday/Sunday first-day-of-week.",
-            "nullable": true,
-            "type": "string"
-          },
           "having": {
             "description": "HAVING clause to be added to aggregate queries using AND operator.",
             "type": "string"
           },
           "having_druid": {
-            "description": "HAVING filters to be added to legacy Druid datasource queries.",
+            "description": "HAVING filters to be added to legacy Druid datasource queries. This field is deprecated",
             "items": {
               "$ref": "#/components/schemas/ChartDataFilter"
             },
@@ -891,18 +926,20 @@
               "NOT IN",
               "REGEX",
               "IS TRUE",
-              "IS FALSE"
+              "IS FALSE",
+              "TEMPORAL_RANGE"
             ],
             "example": "IN",
             "type": "string"
           },
           "val": {
-            "description": "The value or values to compare against. Can be a string, integer, decimal or list, depending on the operator.",
+            "description": "The value or values to compare against. Can be a string, integer, decimal, None or list, depending on the operator.",
             "example": [
               "China",
               "France",
               "Japan"
-            ]
+            ],
+            "nullable": true
           }
         },
         "required": [
@@ -1033,20 +1070,23 @@
             "enum": [
               "aggregate",
               "boxplot",
+              "compare",
               "contribution",
               "cum",
+              "diff",
+              "escape_separator",
+              "flatten",
               "geodetic_parse",
               "geohash_decode",
               "geohash_encode",
               "pivot",
               "prophet",
+              "rename",
+              "resample",
               "rolling",
               "select",
               "sort",
-              "diff",
-              "compare",
-              "resample",
-              "flatten"
+              "unescape_separator"
             ],
             "example": "aggregate",
             "type": "string"
@@ -1143,11 +1183,18 @@
       },
       "ChartDataQueryContextSchema": {
         "properties": {
+          "custom_cache_timeout": {
+            "description": "Override the default cache timeout",
+            "format": "int32",
+            "nullable": true,
+            "type": "integer"
+          },
           "datasource": {
             "$ref": "#/components/schemas/ChartDataDatasource"
           },
           "force": {
             "description": "Should the queries be forced to load from the source. Default: `false`",
+            "nullable": true,
             "type": "boolean"
           },
           "form_data": {
@@ -1405,7 +1452,7 @@
             "type": "string"
           },
           "cache_timeout": {
-            "description": "Cache timeout in following order: custom timeout, datasource timeout, default config timeout.",
+            "description": "Cache timeout in following order: custom timeout, datasource timeout, cache default timeout, config default cache timeout.",
             "format": "int32",
             "nullable": true,
             "type": "integer"
@@ -1526,12 +1573,22 @@
             "nullable": true,
             "type": "string"
           },
+          "changed_on_delta_humanized": {
+            "readOnly": true
+          },
           "dashboards": {
             "$ref": "#/components/schemas/ChartDataRestApi.get.Dashboard"
           },
           "description": {
             "nullable": true,
             "type": "string"
+          },
+          "id": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "is_managed_externally": {
+            "type": "boolean"
           },
           "owners": {
             "$ref": "#/components/schemas/ChartDataRestApi.get.User"
@@ -1548,6 +1605,12 @@
             "maxLength": 250,
             "nullable": true,
             "type": "string"
+          },
+          "thumbnail_url": {
+            "readOnly": true
+          },
+          "url": {
+            "readOnly": true
           },
           "viz_type": {
             "maxLength": 250,
@@ -1632,7 +1695,13 @@
             "readOnly": true
           },
           "created_by": {
-            "$ref": "#/components/schemas/ChartDataRestApi.get_list.User2"
+            "$ref": "#/components/schemas/ChartDataRestApi.get_list.User3"
+          },
+          "created_on_delta_humanized": {
+            "readOnly": true
+          },
+          "dashboards": {
+            "$ref": "#/components/schemas/ChartDataRestApi.get_list.Dashboard"
           },
           "datasource_id": {
             "format": "int32",
@@ -1664,6 +1733,9 @@
             "format": "int32",
             "type": "integer"
           },
+          "is_managed_externally": {
+            "type": "boolean"
+          },
           "last_saved_at": {
             "format": "date-time",
             "nullable": true,
@@ -1673,7 +1745,7 @@
             "$ref": "#/components/schemas/ChartDataRestApi.get_list.User"
           },
           "owners": {
-            "$ref": "#/components/schemas/ChartDataRestApi.get_list.User3"
+            "$ref": "#/components/schemas/ChartDataRestApi.get_list.User2"
           },
           "params": {
             "nullable": true,
@@ -1697,6 +1769,20 @@
             "maxLength": 250,
             "nullable": true,
             "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "ChartDataRestApi.get_list.Dashboard": {
+        "properties": {
+          "dashboard_title": {
+            "maxLength": 500,
+            "nullable": true,
+            "type": "string"
+          },
+          "id": {
+            "format": "int32",
+            "type": "integer"
           }
         },
         "type": "object"
@@ -1768,11 +1854,16 @@
           "last_name": {
             "maxLength": 64,
             "type": "string"
+          },
+          "username": {
+            "maxLength": 64,
+            "type": "string"
           }
         },
         "required": [
           "first_name",
-          "last_name"
+          "last_name",
+          "username"
         ],
         "type": "object"
       },
@@ -1789,16 +1880,11 @@
           "last_name": {
             "maxLength": 64,
             "type": "string"
-          },
-          "username": {
-            "maxLength": 64,
-            "type": "string"
           }
         },
         "required": [
           "first_name",
-          "last_name",
-          "username"
+          "last_name"
         ],
         "type": "object"
       },
@@ -1841,8 +1927,11 @@
           "datasource_type": {
             "description": "The type of dataset/datasource identified on `datasource_id`.",
             "enum": [
-              "druid",
+              "sl_table",
               "table",
+              "dataset",
+              "query",
+              "saved_query",
               "view"
             ],
             "type": "string"
@@ -1944,8 +2033,11 @@
           "datasource_type": {
             "description": "The type of dataset/datasource identified on `datasource_id`.",
             "enum": [
-              "druid",
+              "sl_table",
               "table",
+              "dataset",
+              "query",
+              "saved_query",
               "view"
             ],
             "nullable": true,
@@ -2188,10 +2280,8 @@
             "description": "Form data from the Explore controls used to form the chart's data query.",
             "type": "object"
           },
-          "modified": {
-            "type": "string"
-          },
-          "slice_id": {
+          "id": {
+            "description": "The id of the chart.",
             "format": "int32",
             "type": "integer"
           },
@@ -2275,12 +2365,22 @@
             "nullable": true,
             "type": "string"
           },
+          "changed_on_delta_humanized": {
+            "readOnly": true
+          },
           "dashboards": {
             "$ref": "#/components/schemas/ChartRestApi.get.Dashboard"
           },
           "description": {
             "nullable": true,
             "type": "string"
+          },
+          "id": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "is_managed_externally": {
+            "type": "boolean"
           },
           "owners": {
             "$ref": "#/components/schemas/ChartRestApi.get.User"
@@ -2297,6 +2397,12 @@
             "maxLength": 250,
             "nullable": true,
             "type": "string"
+          },
+          "thumbnail_url": {
+            "readOnly": true
+          },
+          "url": {
+            "readOnly": true
           },
           "viz_type": {
             "maxLength": 250,
@@ -2381,7 +2487,13 @@
             "readOnly": true
           },
           "created_by": {
-            "$ref": "#/components/schemas/ChartRestApi.get_list.User2"
+            "$ref": "#/components/schemas/ChartRestApi.get_list.User3"
+          },
+          "created_on_delta_humanized": {
+            "readOnly": true
+          },
+          "dashboards": {
+            "$ref": "#/components/schemas/ChartRestApi.get_list.Dashboard"
           },
           "datasource_id": {
             "format": "int32",
@@ -2413,6 +2525,9 @@
             "format": "int32",
             "type": "integer"
           },
+          "is_managed_externally": {
+            "type": "boolean"
+          },
           "last_saved_at": {
             "format": "date-time",
             "nullable": true,
@@ -2422,7 +2537,7 @@
             "$ref": "#/components/schemas/ChartRestApi.get_list.User"
           },
           "owners": {
-            "$ref": "#/components/schemas/ChartRestApi.get_list.User3"
+            "$ref": "#/components/schemas/ChartRestApi.get_list.User2"
           },
           "params": {
             "nullable": true,
@@ -2446,6 +2561,20 @@
             "maxLength": 250,
             "nullable": true,
             "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "ChartRestApi.get_list.Dashboard": {
+        "properties": {
+          "dashboard_title": {
+            "maxLength": 500,
+            "nullable": true,
+            "type": "string"
+          },
+          "id": {
+            "format": "int32",
+            "type": "integer"
           }
         },
         "type": "object"
@@ -2517,11 +2646,16 @@
           "last_name": {
             "maxLength": 64,
             "type": "string"
+          },
+          "username": {
+            "maxLength": 64,
+            "type": "string"
           }
         },
         "required": [
           "first_name",
-          "last_name"
+          "last_name",
+          "username"
         ],
         "type": "object"
       },
@@ -2538,16 +2672,11 @@
           "last_name": {
             "maxLength": 64,
             "type": "string"
-          },
-          "username": {
-            "maxLength": 64,
-            "type": "string"
           }
         },
         "required": [
           "first_name",
-          "last_name",
-          "username"
+          "last_name"
         ],
         "type": "object"
       },
@@ -2590,8 +2719,11 @@
           "datasource_type": {
             "description": "The type of dataset/datasource identified on `datasource_id`.",
             "enum": [
-              "druid",
+              "sl_table",
               "table",
+              "dataset",
+              "query",
+              "saved_query",
               "view"
             ],
             "type": "string"
@@ -2693,8 +2825,11 @@
           "datasource_type": {
             "description": "The type of dataset/datasource identified on `datasource_id`.",
             "enum": [
-              "druid",
+              "sl_table",
               "table",
+              "dataset",
+              "query",
+              "saved_query",
               "view"
             ],
             "nullable": true,
@@ -2992,8 +3127,7 @@
           },
           "owners": {
             "items": {
-              "format": "int32",
-              "type": "integer"
+              "type": "object"
             },
             "type": "array"
           },
@@ -3087,6 +3221,10 @@
             "format": "int32",
             "type": "integer"
           },
+          "is_managed_externally": {
+            "nullable": true,
+            "type": "boolean"
+          },
           "json_metadata": {
             "description": "This JSON object is generated dynamically when clicking the save or overwrite button in the dashboard view. It is exposed here for reference and for power users who may want to alter  specific parameters.",
             "type": "string"
@@ -3124,14 +3262,23 @@
       },
       "DashboardPermalinkPostSchema": {
         "properties": {
-          "filterState": {
-            "description": "Native filter state",
-            "type": "object"
+          "activeTabs": {
+            "description": "Current active dashboard tabs",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true,
+            "type": "array"
           },
-          "hash": {
-            "description": "Optional anchor link",
+          "anchor": {
+            "description": "Optional anchor link added to url hash",
             "nullable": true,
             "type": "string"
+          },
+          "dataMask": {
+            "description": "Data mask used for native filter state",
+            "nullable": true,
+            "type": "object"
           },
           "urlParams": {
             "description": "URL Parameters",
@@ -3143,9 +3290,6 @@
             "type": "array"
           }
         },
-        "required": [
-          "filterState"
-        ],
         "type": "object"
       },
       "DashboardRestApi.get": {
@@ -3183,7 +3327,10 @@
             "readOnly": true
           },
           "created_by": {
-            "$ref": "#/components/schemas/DashboardRestApi.get_list.User1"
+            "$ref": "#/components/schemas/DashboardRestApi.get_list.User2"
+          },
+          "created_on_delta_humanized": {
+            "readOnly": true
           },
           "css": {
             "nullable": true,
@@ -3198,12 +3345,15 @@
             "format": "int32",
             "type": "integer"
           },
+          "is_managed_externally": {
+            "type": "boolean"
+          },
           "json_metadata": {
             "nullable": true,
             "type": "string"
           },
           "owners": {
-            "$ref": "#/components/schemas/DashboardRestApi.get_list.User2"
+            "$ref": "#/components/schemas/DashboardRestApi.get_list.User1"
           },
           "position_json": {
             "nullable": true,
@@ -3277,27 +3427,6 @@
       },
       "DashboardRestApi.get_list.User1": {
         "properties": {
-          "first_name": {
-            "maxLength": 64,
-            "type": "string"
-          },
-          "id": {
-            "format": "int32",
-            "type": "integer"
-          },
-          "last_name": {
-            "maxLength": 64,
-            "type": "string"
-          }
-        },
-        "required": [
-          "first_name",
-          "last_name"
-        ],
-        "type": "object"
-      },
-      "DashboardRestApi.get_list.User2": {
-        "properties": {
           "email": {
             "maxLength": 64,
             "type": "string"
@@ -3324,6 +3453,27 @@
           "first_name",
           "last_name",
           "username"
+        ],
+        "type": "object"
+      },
+      "DashboardRestApi.get_list.User2": {
+        "properties": {
+          "first_name": {
+            "maxLength": 64,
+            "type": "string"
+          },
+          "id": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "last_name": {
+            "maxLength": 64,
+            "type": "string"
+          }
+        },
+        "required": [
+          "first_name",
+          "last_name"
         ],
         "type": "object"
       },
@@ -3472,9 +3622,6 @@
       },
       "Database": {
         "properties": {
-          "allow_multi_schema_metadata_fetch": {
-            "type": "boolean"
-          },
           "allows_cost_estimate": {
             "type": "boolean"
           },
@@ -3499,6 +3646,14 @@
             "type": "integer"
           },
           "name": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "Database1": {
+        "properties": {
+          "database_name": {
             "type": "string"
           }
         },
@@ -3611,10 +3766,6 @@
             "nullable": true,
             "type": "boolean"
           },
-          "allow_multi_schema_metadata_fetch": {
-            "nullable": true,
-            "type": "boolean"
-          },
           "allow_run_async": {
             "nullable": true,
             "type": "boolean"
@@ -3636,9 +3787,11 @@
             "maxLength": 250,
             "type": "string"
           },
-          "encrypted_extra": {
-            "nullable": true,
-            "type": "string"
+          "driver": {
+            "readOnly": true
+          },
+          "engine_information": {
+            "readOnly": true
           },
           "expose_in_sqllab": {
             "nullable": true,
@@ -3661,6 +3814,12 @@
             "nullable": true,
             "type": "boolean"
           },
+          "is_managed_externally": {
+            "type": "boolean"
+          },
+          "masked_encrypted_extra": {
+            "readOnly": true
+          },
           "parameters": {
             "readOnly": true
           },
@@ -3673,6 +3832,11 @@
           },
           "sqlalchemy_uri": {
             "maxLength": 1024,
+            "type": "string"
+          },
+          "uuid": {
+            "format": "uuid",
+            "nullable": true,
             "type": "string"
           }
         },
@@ -3697,10 +3861,6 @@
             "type": "boolean"
           },
           "allow_file_upload": {
-            "nullable": true,
-            "type": "boolean"
-          },
-          "allow_multi_schema_metadata_fetch": {
             "nullable": true,
             "type": "boolean"
           },
@@ -3738,6 +3898,9 @@
           "disable_data_preview": {
             "readOnly": true
           },
+          "engine_information": {
+            "readOnly": true
+          },
           "explore_database_id": {
             "readOnly": true
           },
@@ -3757,6 +3920,11 @@
           "id": {
             "format": "int32",
             "type": "integer"
+          },
+          "uuid": {
+            "format": "uuid",
+            "nullable": true,
+            "type": "string"
           }
         },
         "required": [
@@ -3799,10 +3967,6 @@
             "description": "Allow to upload CSV file data into this databaseIf selected, please set the schemas allowed for csv upload in Extra.",
             "type": "boolean"
           },
-          "allow_multi_schema_metadata_fetch": {
-            "description": "Allow SQL Lab to fetch a list of all tables and all views across all database schemas. For large data warehouse with thousands of tables, this can be expensive and put strain on the system.",
-            "type": "boolean"
-          },
           "allow_run_async": {
             "description": "Operate the database in asynchronous mode, meaning  that the queries are executed on remote workers as opposed to on the web server itself. This assumes that you have a Celery worker setup as well as a results backend. Refer to the installation docs for more information.",
             "type": "boolean"
@@ -3823,8 +3987,8 @@
             "minLength": 1,
             "type": "string"
           },
-          "encrypted_extra": {
-            "description": "<p>JSON string containing additional connection configuration.<br>This is used to provide connection information for systems like Hive, Presto, and BigQuery, which do not conform to the username:password syntax normally used by SQLAlchemy.</p>",
+          "driver": {
+            "description": "SQLAlchemy driver to use",
             "nullable": true,
             "type": "string"
           },
@@ -3860,6 +4024,11 @@
             "nullable": true,
             "type": "boolean"
           },
+          "masked_encrypted_extra": {
+            "description": "<p>JSON string containing additional connection configuration.<br>This is used to provide connection information for systems like Hive, Presto, and BigQuery, which do not conform to the username:password syntax normally used by SQLAlchemy.</p>",
+            "nullable": true,
+            "type": "string"
+          },
           "parameters": {
             "additionalProperties": {},
             "description": "DB-specific parameters for configuration",
@@ -3874,6 +4043,17 @@
             "description": "<p>Refer to the <a href=\"https://docs.sqlalchemy.org/en/rel_1_2/core/engines.html#database-urls\">SqlAlchemy docs</a> for more information on how to structure your URI.</p>",
             "maxLength": 1024,
             "minLength": 1,
+            "type": "string"
+          },
+          "ssh_tunnel": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DatabaseSSHTunnel"
+              }
+            ],
+            "nullable": true
+          },
+          "uuid": {
             "type": "string"
           }
         },
@@ -3900,10 +4080,6 @@
             "description": "Allow to upload CSV file data into this databaseIf selected, please set the schemas allowed for csv upload in Extra.",
             "type": "boolean"
           },
-          "allow_multi_schema_metadata_fetch": {
-            "description": "Allow SQL Lab to fetch a list of all tables and all views across all database schemas. For large data warehouse with thousands of tables, this can be expensive and put strain on the system.",
-            "type": "boolean"
-          },
           "allow_run_async": {
             "description": "Operate the database in asynchronous mode, meaning  that the queries are executed on remote workers as opposed to on the web server itself. This assumes that you have a Celery worker setup as well as a results backend. Refer to the installation docs for more information.",
             "type": "boolean"
@@ -3925,8 +4101,8 @@
             "nullable": true,
             "type": "string"
           },
-          "encrypted_extra": {
-            "description": "<p>JSON string containing additional connection configuration.<br>This is used to provide connection information for systems like Hive, Presto, and BigQuery, which do not conform to the username:password syntax normally used by SQLAlchemy.</p>",
+          "driver": {
+            "description": "SQLAlchemy driver to use",
             "nullable": true,
             "type": "string"
           },
@@ -3962,6 +4138,11 @@
             "nullable": true,
             "type": "boolean"
           },
+          "masked_encrypted_extra": {
+            "description": "<p>JSON string containing additional connection configuration.<br>This is used to provide connection information for systems like Hive, Presto, and BigQuery, which do not conform to the username:password syntax normally used by SQLAlchemy.</p>",
+            "nullable": true,
+            "type": "string"
+          },
           "parameters": {
             "additionalProperties": {},
             "description": "DB-specific parameters for configuration",
@@ -3976,6 +4157,38 @@
             "description": "<p>Refer to the <a href=\"https://docs.sqlalchemy.org/en/rel_1_2/core/engines.html#database-urls\">SqlAlchemy docs</a> for more information on how to structure your URI.</p>",
             "maxLength": 1024,
             "minLength": 0,
+            "type": "string"
+          },
+          "ssh_tunnel": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DatabaseSSHTunnel"
+              }
+            ],
+            "nullable": true
+          }
+        },
+        "type": "object"
+      },
+      "DatabaseSSHTunnel": {
+        "properties": {
+          "password": {
+            "type": "string"
+          },
+          "private_key": {
+            "type": "string"
+          },
+          "private_key_password": {
+            "type": "string"
+          },
+          "server_address": {
+            "type": "string"
+          },
+          "server_port": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "username": {
             "type": "string"
           }
         },
@@ -3994,8 +4207,8 @@
             "nullable": true,
             "type": "string"
           },
-          "encrypted_extra": {
-            "description": "<p>JSON string containing additional connection configuration.<br>This is used to provide connection information for systems like Hive, Presto, and BigQuery, which do not conform to the username:password syntax normally used by SQLAlchemy.</p>",
+          "driver": {
+            "description": "SQLAlchemy driver to use",
             "nullable": true,
             "type": "string"
           },
@@ -4011,6 +4224,11 @@
           "impersonate_user": {
             "description": "If Presto, all the queries in SQL Lab are going to be executed as the currently logged on user who must have permission to run them.<br/>If Hive and hive.server2.enable.doAs is enabled, will run the queries as service account, but impersonate the currently logged on user via hive.server2.proxy.user property.",
             "type": "boolean"
+          },
+          "masked_encrypted_extra": {
+            "description": "<p>JSON string containing additional connection configuration.<br>This is used to provide connection information for systems like Hive, Presto, and BigQuery, which do not conform to the username:password syntax normally used by SQLAlchemy.</p>",
+            "nullable": true,
+            "type": "string"
           },
           "parameters": {
             "additionalProperties": {},
@@ -4027,12 +4245,27 @@
             "maxLength": 1024,
             "minLength": 1,
             "type": "string"
+          },
+          "ssh_tunnel": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DatabaseSSHTunnel"
+              }
+            ],
+            "nullable": true
           }
         },
         "type": "object"
       },
       "DatabaseValidateParametersSchema": {
         "properties": {
+          "catalog": {
+            "additionalProperties": {
+              "nullable": true
+            },
+            "description": "Gsheets specific column for managing label to sheet urls",
+            "type": "object"
+          },
           "configuration_method": {
             "description": "Configuration_method is used on the frontend to inform the backend whether to explode parameters or to provide only a sqlalchemy_uri."
           },
@@ -4043,8 +4276,8 @@
             "nullable": true,
             "type": "string"
           },
-          "encrypted_extra": {
-            "description": "<p>JSON string containing additional connection configuration.<br>This is used to provide connection information for systems like Hive, Presto, and BigQuery, which do not conform to the username:password syntax normally used by SQLAlchemy.</p>",
+          "driver": {
+            "description": "SQLAlchemy driver to use",
             "nullable": true,
             "type": "string"
           },
@@ -4056,9 +4289,20 @@
             "description": "<p>JSON string containing extra configuration elements.<br>1. The <code>engine_params</code> object gets unpacked into the <a href=\"https://docs.sqlalchemy.org/en/latest/core/engines.html#sqlalchemy.create_engine\">sqlalchemy.create_engine</a> call, while the <code>metadata_params</code> gets unpacked into the <a href=\"https://docs.sqlalchemy.org/en/rel_1_0/core/metadata.html#sqlalchemy.schema.MetaData\">sqlalchemy.MetaData</a> call.<br>2. The <code>metadata_cache_timeout</code> is a cache timeout setting in seconds for metadata fetch of this database. Specify it as <strong>\"metadata_cache_timeout\": {\"schema_cache_timeout\": 600, \"table_cache_timeout\": 600}</strong>. If unset, cache will not be enabled for the functionality. A timeout of 0 indicates that the cache never expires.<br>3. The <code>schemas_allowed_for_file_upload</code> is a comma separated list of schemas that CSVs are allowed to upload to. Specify it as <strong>\"schemas_allowed_for_file_upload\": [\"public\", \"csv_upload\"]</strong>. If database flavor does not support schema or any schema is allowed to be accessed, just leave the list empty<br>4. The <code>version</code> field is a string specifying the this db's version. This should be used with Presto DBs so that the syntax is correct<br>5. The <code>allows_virtual_table_explore</code> field is a boolean specifying whether or not the Explore button in SQL Lab results is shown.<br>6. The <code>disable_data_preview</code> field is a boolean specifying whether or not data preview queries will be run when fetching table metadata in SQL Lab.</p>",
             "type": "string"
           },
+          "id": {
+            "description": "Database ID (for updates)",
+            "format": "int32",
+            "nullable": true,
+            "type": "integer"
+          },
           "impersonate_user": {
             "description": "If Presto, all the queries in SQL Lab are going to be executed as the currently logged on user who must have permission to run them.<br/>If Hive and hive.server2.enable.doAs is enabled, will run the queries as service account, but impersonate the currently logged on user via hive.server2.proxy.user property.",
             "type": "boolean"
+          },
+          "masked_encrypted_extra": {
+            "description": "<p>JSON string containing additional connection configuration.<br>This is used to provide connection information for systems like Hive, Presto, and BigQuery, which do not conform to the username:password syntax normally used by SQLAlchemy.</p>",
+            "nullable": true,
+            "type": "string"
           },
           "parameters": {
             "additionalProperties": {
@@ -4079,8 +4323,182 @@
         ],
         "type": "object"
       },
+      "Dataset": {
+        "properties": {
+          "cache_timeout": {
+            "description": "Duration (in seconds) of the caching timeout for this dataset.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "column_formats": {
+            "description": "Column formats.",
+            "type": "object"
+          },
+          "columns": {
+            "description": "Columns metadata.",
+            "items": {
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "database": {
+            "description": "Database associated with the dataset.",
+            "type": "object"
+          },
+          "datasource_name": {
+            "description": "Dataset name.",
+            "type": "string"
+          },
+          "default_endpoint": {
+            "description": "Default endpoint for the dataset.",
+            "type": "string"
+          },
+          "description": {
+            "description": "Dataset description.",
+            "type": "string"
+          },
+          "edit_url": {
+            "description": "The URL for editing the dataset.",
+            "type": "string"
+          },
+          "extra": {
+            "description": "JSON string containing extra configuration elements.",
+            "type": "object"
+          },
+          "fetch_values_predicate": {
+            "description": "Predicate used when fetching values from the dataset.",
+            "type": "string"
+          },
+          "filter_select": {
+            "description": "SELECT filter applied to the dataset.",
+            "type": "boolean"
+          },
+          "filter_select_enabled": {
+            "description": "If the SELECT filter is enabled.",
+            "type": "boolean"
+          },
+          "granularity_sqla": {
+            "description": "Name of temporal column used for time filtering for SQL datasources. This field is deprecated, use `granularity` instead.",
+            "items": {
+              "items": {
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "type": "array"
+          },
+          "health_check_message": {
+            "description": "Health check message.",
+            "type": "string"
+          },
+          "id": {
+            "description": "Dataset ID.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "is_sqllab_view": {
+            "description": "If the dataset is a SQL Lab view.",
+            "type": "boolean"
+          },
+          "main_dttm_col": {
+            "description": "The main temporal column.",
+            "type": "string"
+          },
+          "metrics": {
+            "description": "Dataset metrics.",
+            "items": {
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "name": {
+            "description": "Dataset name.",
+            "type": "string"
+          },
+          "offset": {
+            "description": "Dataset offset.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "order_by_choices": {
+            "description": "List of order by columns.",
+            "items": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "type": "array"
+          },
+          "owners": {
+            "description": "List of owners identifiers",
+            "items": {
+              "format": "int32",
+              "type": "integer"
+            },
+            "type": "array"
+          },
+          "params": {
+            "description": "Extra params for the dataset.",
+            "type": "object"
+          },
+          "perm": {
+            "description": "Permission expression.",
+            "type": "string"
+          },
+          "schema": {
+            "description": "Dataset schema.",
+            "type": "string"
+          },
+          "select_star": {
+            "description": "Select all clause.",
+            "type": "string"
+          },
+          "sql": {
+            "description": "A SQL statement that defines the dataset.",
+            "type": "string"
+          },
+          "table_name": {
+            "description": "The name of the table associated with the dataset.",
+            "type": "string"
+          },
+          "template_params": {
+            "description": "Table template params.",
+            "type": "object"
+          },
+          "time_grain_sqla": {
+            "description": "List of temporal granularities supported by the dataset.",
+            "items": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "type": "array"
+          },
+          "type": {
+            "description": "Dataset type.",
+            "type": "string"
+          },
+          "uid": {
+            "description": "Dataset unique identifier.",
+            "type": "string"
+          },
+          "verbose_map": {
+            "description": "Mapping from raw name to verbose name.",
+            "type": "object"
+          }
+        },
+        "type": "object"
+      },
       "DatasetColumnsPut": {
         "properties": {
+          "advanced_data_type": {
+            "maxLength": 255,
+            "minLength": 1,
+            "nullable": true,
+            "type": "string"
+          },
           "column_name": {
             "maxLength": 255,
             "minLength": 1,
@@ -4173,6 +4591,24 @@
             "type": "integer"
           }
         },
+        "type": "object"
+      },
+      "DatasetDuplicateSchema": {
+        "properties": {
+          "base_model_id": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "table_name": {
+            "maxLength": 250,
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "base_model_id",
+          "table_name"
+        ],
         "type": "object"
       },
       "DatasetMetricRestApi.get": {
@@ -4350,8 +4786,30 @@
             "nullable": true,
             "type": "integer"
           },
+          "changed_by": {
+            "$ref": "#/components/schemas/DatasetRestApi.get.User"
+          },
+          "changed_on": {
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "changed_on_humanized": {
+            "readOnly": true
+          },
           "columns": {
             "$ref": "#/components/schemas/DatasetRestApi.get.TableColumn"
+          },
+          "created_by": {
+            "$ref": "#/components/schemas/DatasetRestApi.get.User2"
+          },
+          "created_on": {
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "created_on_humanized": {
+            "readOnly": true
           },
           "database": {
             "$ref": "#/components/schemas/DatasetRestApi.get.Database"
@@ -4383,9 +4841,15 @@
             "format": "int32",
             "type": "integer"
           },
+          "is_managed_externally": {
+            "type": "boolean"
+          },
           "is_sqllab_view": {
             "nullable": true,
             "type": "boolean"
+          },
+          "kind": {
+            "readOnly": true
           },
           "main_dttm_col": {
             "maxLength": 250,
@@ -4401,12 +4865,15 @@
             "type": "integer"
           },
           "owners": {
-            "$ref": "#/components/schemas/DatasetRestApi.get.User"
+            "$ref": "#/components/schemas/DatasetRestApi.get.User1"
           },
           "schema": {
             "maxLength": 255,
             "nullable": true,
             "type": "string"
+          },
+          "select_star": {
+            "readOnly": true
           },
           "sql": {
             "nullable": true,
@@ -4492,11 +4959,6 @@
             "nullable": true,
             "type": "string"
           },
-          "uuid": {
-            "format": "uuid",
-            "nullable": true,
-            "type": "string"
-          },
           "verbose_name": {
             "maxLength": 1024,
             "nullable": true,
@@ -4515,6 +4977,11 @@
       },
       "DatasetRestApi.get.TableColumn": {
         "properties": {
+          "advanced_data_type": {
+            "maxLength": 255,
+            "nullable": true,
+            "type": "string"
+          },
           "changed_on": {
             "format": "date-time",
             "nullable": true,
@@ -4595,6 +5062,23 @@
             "maxLength": 64,
             "type": "string"
           },
+          "last_name": {
+            "maxLength": 64,
+            "type": "string"
+          }
+        },
+        "required": [
+          "first_name",
+          "last_name"
+        ],
+        "type": "object"
+      },
+      "DatasetRestApi.get.User1": {
+        "properties": {
+          "first_name": {
+            "maxLength": 64,
+            "type": "string"
+          },
           "id": {
             "format": "int32",
             "type": "integer"
@@ -4615,10 +5099,27 @@
         ],
         "type": "object"
       },
+      "DatasetRestApi.get.User2": {
+        "properties": {
+          "first_name": {
+            "maxLength": 64,
+            "type": "string"
+          },
+          "last_name": {
+            "maxLength": 64,
+            "type": "string"
+          }
+        },
+        "required": [
+          "first_name",
+          "last_name"
+        ],
+        "type": "object"
+      },
       "DatasetRestApi.get_list": {
         "properties": {
           "changed_by": {
-            "$ref": "#/components/schemas/DatasetRestApi.get_list.User"
+            "$ref": "#/components/schemas/DatasetRestApi.get_list.User1"
           },
           "changed_by_name": {
             "readOnly": true
@@ -4661,7 +5162,7 @@
             "readOnly": true
           },
           "owners": {
-            "$ref": "#/components/schemas/DatasetRestApi.get_list.User1"
+            "$ref": "#/components/schemas/DatasetRestApi.get_list.User"
           },
           "schema": {
             "maxLength": 255,
@@ -4705,23 +5206,6 @@
             "maxLength": 64,
             "type": "string"
           },
-          "username": {
-            "maxLength": 64,
-            "type": "string"
-          }
-        },
-        "required": [
-          "first_name",
-          "username"
-        ],
-        "type": "object"
-      },
-      "DatasetRestApi.get_list.User1": {
-        "properties": {
-          "first_name": {
-            "maxLength": 64,
-            "type": "string"
-          },
           "id": {
             "format": "int32",
             "type": "integer"
@@ -4738,6 +5222,23 @@
         "required": [
           "first_name",
           "last_name",
+          "username"
+        ],
+        "type": "object"
+      },
+      "DatasetRestApi.get_list.User1": {
+        "properties": {
+          "first_name": {
+            "maxLength": 64,
+            "type": "string"
+          },
+          "username": {
+            "maxLength": 64,
+            "type": "string"
+          }
+        },
+        "required": [
+          "first_name",
           "username"
         ],
         "type": "object"
@@ -4766,6 +5267,10 @@
           "schema": {
             "maxLength": 250,
             "minLength": 0,
+            "type": "string"
+          },
+          "sql": {
+            "nullable": true,
             "type": "string"
           },
           "table_name": {
@@ -4889,8 +5394,11 @@
           "datasource_type": {
             "description": "The type of dataset/datasource identified on `datasource_id`.",
             "enum": [
-              "druid",
+              "sl_table",
               "table",
+              "dataset",
+              "query",
+              "saved_query",
               "view"
             ],
             "type": "string"
@@ -4926,6 +5434,99 @@
           "text": {
             "description": "The distinct item",
             "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "EmbeddedDashboardConfig": {
+        "properties": {
+          "allowed_domains": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "allowed_domains"
+        ],
+        "type": "object"
+      },
+      "EmbeddedDashboardResponseSchema": {
+        "properties": {
+          "allowed_domains": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "changed_by": {
+            "$ref": "#/components/schemas/User"
+          },
+          "changed_on": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "dashboard_id": {
+            "type": "string"
+          },
+          "uuid": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "EmbeddedDashboardRestApi.get": {
+        "properties": {
+          "uuid": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "EmbeddedDashboardRestApi.get_list": {
+        "properties": {
+          "uuid": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "EmbeddedDashboardRestApi.post": {
+        "properties": {
+          "uuid": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "EmbeddedDashboardRestApi.put": {
+        "properties": {
+          "uuid": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "ExploreContextSchema": {
+        "properties": {
+          "dataset": {
+            "$ref": "#/components/schemas/Dataset"
+          },
+          "form_data": {
+            "description": "Form data from the Explore controls used to form the chart's data query.",
+            "type": "object"
+          },
+          "message": {
+            "description": "Any message related to the processed request.",
+            "type": "string"
+          },
+          "slice": {
+            "$ref": "#/components/schemas/Slice"
           }
         },
         "type": "object"
@@ -5113,10 +5714,22 @@
             "format": "int32",
             "type": "integer"
           },
-          "dataset_id": {
-            "description": "The dataset ID",
+          "datasource_id": {
+            "description": "The datasource ID",
             "format": "int32",
             "type": "integer"
+          },
+          "datasource_type": {
+            "description": "The datasource type",
+            "enum": [
+              "sl_table",
+              "table",
+              "dataset",
+              "query",
+              "saved_query",
+              "view"
+            ],
+            "type": "string"
           },
           "form_data": {
             "description": "Any type of JSON supported text.",
@@ -5124,7 +5737,8 @@
           }
         },
         "required": [
-          "dataset_id",
+          "datasource_id",
+          "datasource_type",
           "form_data"
         ],
         "type": "object"
@@ -5136,10 +5750,22 @@
             "format": "int32",
             "type": "integer"
           },
-          "dataset_id": {
-            "description": "The dataset ID",
+          "datasource_id": {
+            "description": "The datasource ID",
             "format": "int32",
             "type": "integer"
+          },
+          "datasource_type": {
+            "description": "The datasource type",
+            "enum": [
+              "sl_table",
+              "table",
+              "dataset",
+              "query",
+              "saved_query",
+              "view"
+            ],
+            "type": "string"
           },
           "form_data": {
             "description": "Any type of JSON supported text.",
@@ -5147,7 +5773,8 @@
           }
         },
         "required": [
-          "dataset_id",
+          "datasource_id",
+          "datasource_type",
           "form_data"
         ],
         "type": "object"
@@ -5446,8 +6073,7 @@
             "type": "string"
           },
           "tracking_url": {
-            "nullable": true,
-            "type": "string"
+            "readOnly": true
           }
         },
         "required": [
@@ -5469,18 +6095,16 @@
         "properties": {
           "changed_on": {
             "format": "date-time",
-            "nullable": true,
             "type": "string"
           },
           "database": {
-            "$ref": "#/components/schemas/QueryRestApi.get_list.Database"
+            "$ref": "#/components/schemas/Database1"
           },
           "end_time": {
-            "nullable": true,
+            "format": "float",
             "type": "number"
           },
           "executed_sql": {
-            "nullable": true,
             "type": "string"
           },
           "id": {
@@ -5489,89 +6113,37 @@
           },
           "rows": {
             "format": "int32",
-            "nullable": true,
             "type": "integer"
           },
           "schema": {
-            "maxLength": 256,
-            "nullable": true,
             "type": "string"
           },
           "sql": {
-            "nullable": true,
             "type": "string"
           },
           "sql_tables": {
             "readOnly": true
           },
           "start_time": {
-            "nullable": true,
+            "format": "float",
             "type": "number"
           },
           "status": {
-            "maxLength": 16,
-            "nullable": true,
             "type": "string"
           },
           "tab_name": {
-            "maxLength": 256,
-            "nullable": true,
             "type": "string"
           },
           "tmp_table_name": {
-            "maxLength": 256,
-            "nullable": true,
             "type": "string"
           },
           "tracking_url": {
-            "nullable": true,
             "type": "string"
           },
           "user": {
-            "$ref": "#/components/schemas/QueryRestApi.get_list.User"
+            "$ref": "#/components/schemas/User"
           }
         },
-        "required": [
-          "database"
-        ],
-        "type": "object"
-      },
-      "QueryRestApi.get_list.Database": {
-        "properties": {
-          "database_name": {
-            "maxLength": 250,
-            "type": "string"
-          }
-        },
-        "required": [
-          "database_name"
-        ],
-        "type": "object"
-      },
-      "QueryRestApi.get_list.User": {
-        "properties": {
-          "first_name": {
-            "maxLength": 64,
-            "type": "string"
-          },
-          "id": {
-            "format": "int32",
-            "type": "integer"
-          },
-          "last_name": {
-            "maxLength": 64,
-            "type": "string"
-          },
-          "username": {
-            "maxLength": 64,
-            "type": "string"
-          }
-        },
-        "required": [
-          "first_name",
-          "last_name",
-          "username"
-        ],
         "type": "object"
       },
       "QueryRestApi.post": {
@@ -5610,6 +6182,10 @@
       },
       "RelatedResultResponse": {
         "properties": {
+          "extra": {
+            "description": "The extra metadata for related item",
+            "type": "object"
+          },
           "text": {
             "description": "The related item string representation",
             "type": "string"
@@ -5796,6 +6372,9 @@
           "description": {
             "nullable": true,
             "type": "string"
+          },
+          "extra": {
+            "readOnly": true
           },
           "force_screenshot": {
             "nullable": true,
@@ -5991,8 +6570,13 @@
           "changed_on_delta_humanized": {
             "readOnly": true
           },
+          "chart_id": {
+            "format": "int32",
+            "nullable": true,
+            "type": "integer"
+          },
           "created_by": {
-            "$ref": "#/components/schemas/ReportScheduleRestApi.get_list.User1"
+            "$ref": "#/components/schemas/ReportScheduleRestApi.get_list.User2"
           },
           "created_on": {
             "format": "date-time",
@@ -6011,9 +6595,17 @@
           "crontab_humanized": {
             "readOnly": true
           },
+          "dashboard_id": {
+            "format": "int32",
+            "nullable": true,
+            "type": "integer"
+          },
           "description": {
             "nullable": true,
             "type": "string"
+          },
+          "extra": {
+            "readOnly": true
           },
           "id": {
             "format": "int32",
@@ -6034,7 +6626,7 @@
             "type": "string"
           },
           "owners": {
-            "$ref": "#/components/schemas/ReportScheduleRestApi.get_list.User2"
+            "$ref": "#/components/schemas/ReportScheduleRestApi.get_list.User1"
           },
           "recipients": {
             "$ref": "#/components/schemas/ReportScheduleRestApi.get_list.ReportRecipients"
@@ -6095,6 +6687,10 @@
             "maxLength": 64,
             "type": "string"
           },
+          "id": {
+            "format": "int32",
+            "type": "integer"
+          },
           "last_name": {
             "maxLength": 64,
             "type": "string"
@@ -6111,10 +6707,6 @@
           "first_name": {
             "maxLength": 64,
             "type": "string"
-          },
-          "id": {
-            "format": "int32",
-            "type": "integer"
           },
           "last_name": {
             "maxLength": 64,
@@ -6775,6 +7367,7 @@
               "Pacific/Guam",
               "Pacific/Honolulu",
               "Pacific/Johnston",
+              "Pacific/Kanton",
               "Pacific/Kiritimati",
               "Pacific/Kosrae",
               "Pacific/Kwajalein",
@@ -6901,6 +7494,9 @@
             "example": "Daily sales dashboard to marketing",
             "nullable": true,
             "type": "string"
+          },
+          "extra": {
+            "type": "object"
           },
           "force_screenshot": {
             "type": "boolean"
@@ -7499,6 +8095,7 @@
               "Pacific/Guam",
               "Pacific/Honolulu",
               "Pacific/Johnston",
+              "Pacific/Kanton",
               "Pacific/Kiritimati",
               "Pacific/Kosrae",
               "Pacific/Kwajalein",
@@ -7625,6 +8222,9 @@
       },
       "SavedQueryRestApi.get": {
         "properties": {
+          "changed_on_delta_humanized": {
+            "readOnly": true
+          },
           "created_by": {
             "$ref": "#/components/schemas/SavedQueryRestApi.get.User"
           },
@@ -7655,6 +8255,10 @@
           },
           "sql_tables": {
             "readOnly": true
+          },
+          "template_parameters": {
+            "nullable": true,
+            "type": "string"
           }
         },
         "type": "object"
@@ -7817,6 +8421,10 @@
           "sql": {
             "nullable": true,
             "type": "string"
+          },
+          "template_parameters": {
+            "nullable": true,
+            "type": "string"
           }
         },
         "type": "object"
@@ -7845,6 +8453,10 @@
           "sql": {
             "nullable": true,
             "type": "string"
+          },
+          "template_parameters": {
+            "nullable": true,
+            "type": "string"
           }
         },
         "type": "object"
@@ -7866,6 +8478,107 @@
           "result": {
             "description": "SQL select star",
             "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "Slice": {
+        "properties": {
+          "cache_timeout": {
+            "description": "Duration (in seconds) of the caching timeout for this chart.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "certification_details": {
+            "description": "Details of the certification.",
+            "type": "string"
+          },
+          "certified_by": {
+            "description": "Person or group that has certified this dashboard.",
+            "type": "string"
+          },
+          "changed_on": {
+            "description": "Timestamp of the last modification.",
+            "type": "string"
+          },
+          "changed_on_humanized": {
+            "description": "Timestamp of the last modification in human readable form.",
+            "type": "string"
+          },
+          "datasource": {
+            "description": "Datasource identifier.",
+            "type": "string"
+          },
+          "description": {
+            "description": "Slice description.",
+            "type": "string"
+          },
+          "description_markeddown": {
+            "description": "Sanitized HTML version of the chart description.",
+            "type": "string"
+          },
+          "edit_url": {
+            "description": "The URL for editing the slice.",
+            "type": "string"
+          },
+          "form_data": {
+            "description": "Form data associated with the slice.",
+            "type": "object"
+          },
+          "is_managed_externally": {
+            "description": "If the chart is managed outside externally.",
+            "type": "boolean"
+          },
+          "modified": {
+            "description": "Last modification in human readable form.",
+            "type": "string"
+          },
+          "owners": {
+            "description": "Owners identifiers.",
+            "items": {
+              "format": "int32",
+              "type": "integer"
+            },
+            "type": "array"
+          },
+          "query_context": {
+            "description": "The context associated with the query.",
+            "type": "object"
+          },
+          "slice_id": {
+            "description": "The slice ID.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "slice_name": {
+            "description": "The slice name.",
+            "type": "string"
+          },
+          "slice_url": {
+            "description": "The slice URL.",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "StopQuerySchema": {
+        "properties": {
+          "client_id": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "TableExtraMetadataResponseSchema": {
+        "properties": {
+          "clustering": {
+            "type": "object"
+          },
+          "metadata": {
+            "type": "object"
+          },
+          "partitions": {
+            "type": "object"
           }
         },
         "type": "object"
@@ -8095,6 +8808,46 @@
         },
         "type": "object"
       },
+      "ValidateSQLRequest": {
+        "properties": {
+          "schema": {
+            "nullable": true,
+            "type": "string"
+          },
+          "sql": {
+            "description": "SQL statement to validate",
+            "type": "string"
+          },
+          "template_params": {
+            "nullable": true,
+            "type": "object"
+          }
+        },
+        "required": [
+          "sql"
+        ],
+        "type": "object"
+      },
+      "ValidateSQLResponse": {
+        "properties": {
+          "end_column": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "line_number": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "message": {
+            "type": "string"
+          },
+          "start_column": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
       "ValidatorConfigJSON": {
         "properties": {
           "op": {
@@ -8114,6 +8867,26 @@
             "type": "number"
           }
         },
+        "type": "object"
+      },
+      "advanced_data_type_convert_schema": {
+        "properties": {
+          "type": {
+            "default": "port",
+            "type": "string"
+          },
+          "values": {
+            "items": {
+              "default": "http"
+            },
+            "minItems": 1,
+            "type": "array"
+          }
+        },
+        "required": [
+          "type",
+          "values"
+        ],
         "type": "object"
       },
       "database_schemas_query_schema": {
@@ -8359,6 +9132,98 @@
   },
   "openapi": "3.0.2",
   "paths": {
+    "/api/v1/advanced_data_type/convert": {
+      "get": {
+        "parameters": [
+          {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/advanced_data_type_convert_schema"
+                }
+              }
+            },
+            "in": "query",
+            "name": "q"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdvancedDataTypeSchema"
+                }
+              }
+            },
+            "description": "AdvancedDataTypeResponse object has been returned."
+          },
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "404": {
+            "$ref": "#/components/responses/404"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        },
+        "security": [
+          {
+            "jwt": []
+          }
+        ],
+        "summary": "Returns a AdvancedDataTypeResponse object populated with the passed in args.",
+        "tags": [
+          "Advanced Data Type"
+        ]
+      }
+    },
+    "/api/v1/advanced_data_type/types": {
+      "get": {
+        "description": "Returns a list of available advanced data types.",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "result": {
+                      "items": {
+                        "type": "string"
+                      },
+                      "type": "array"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "a successful return of the available advanced data types has taken place."
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "404": {
+            "$ref": "#/components/responses/404"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        },
+        "security": [
+          {
+            "jwt": []
+          }
+        ],
+        "tags": [
+          "Advanced Data Type"
+        ]
+      }
+    },
     "/api/v1/annotation_layer/": {
       "delete": {
         "description": "Deletes multiple annotation layers in a bulk operation.",
@@ -9365,9 +10230,6 @@
             },
             "description": "ZIP file"
           },
-          "400": {
-            "$ref": "#/components/responses/400"
-          },
           "401": {
             "$ref": "#/components/responses/401"
           },
@@ -9425,7 +10287,7 @@
                 }
               }
             },
-            "description": "Dashboard import result"
+            "description": "Assets import result"
           },
           "400": {
             "$ref": "#/components/responses/400"
@@ -9522,6 +10384,42 @@
         ],
         "tags": [
           "AsyncEventsRestApi"
+        ]
+      }
+    },
+    "/api/v1/available_domains/": {
+      "get": {
+        "description": "Get all available domains",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "result": {
+                      "$ref": "#/components/schemas/AvailableDomainsSchema"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "a list of available domains"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          }
+        },
+        "security": [
+          {
+            "jwt": []
+          }
+        ],
+        "tags": [
+          "Available Domains"
         ]
       }
     },
@@ -10445,7 +11343,7 @@
           }
         ],
         "responses": {
-          "200": {
+          "202": {
             "content": {
               "application/json": {
                 "schema": {
@@ -10454,9 +11352,6 @@
               }
             },
             "description": "Chart async result"
-          },
-          "302": {
-            "description": "Redirects to the current digest"
           },
           "400": {
             "$ref": "#/components/responses/400"
@@ -10508,6 +11403,14 @@
             "name": "type",
             "schema": {
               "type": "string"
+            }
+          },
+          {
+            "description": "Should the queries be forced to load from the source",
+            "in": "query",
+            "name": "force",
+            "schema": {
+              "type": "boolean"
             }
           }
         ],
@@ -10584,9 +11487,6 @@
               }
             },
             "description": "Chart thumbnail image"
-          },
-          "302": {
-            "description": "Redirects to the current digest"
           },
           "400": {
             "$ref": "#/components/responses/400"
@@ -11438,9 +12338,6 @@
             },
             "description": "Dashboard added"
           },
-          "302": {
-            "description": "Redirects to the current digest"
-          },
           "400": {
             "$ref": "#/components/responses/400"
           },
@@ -12148,9 +13045,6 @@
             },
             "description": "Dashboard"
           },
-          "302": {
-            "description": "Redirects to the current digest"
-          },
           "400": {
             "$ref": "#/components/responses/400"
           },
@@ -12205,9 +13099,6 @@
               }
             },
             "description": "Dashboard chart definitions"
-          },
-          "302": {
-            "description": "Redirects to the current digest"
           },
           "400": {
             "$ref": "#/components/responses/400"
@@ -12265,9 +13156,6 @@
             },
             "description": "Dashboard dataset definitions"
           },
-          "302": {
-            "description": "Redirects to the current digest"
-          },
           "400": {
             "$ref": "#/components/responses/400"
           },
@@ -12279,6 +13167,210 @@
           },
           "404": {
             "$ref": "#/components/responses/404"
+          }
+        },
+        "security": [
+          {
+            "jwt": []
+          }
+        ],
+        "tags": [
+          "Dashboards"
+        ]
+      }
+    },
+    "/api/v1/dashboard/{id_or_slug}/embedded": {
+      "delete": {
+        "description": "Removes a dashboard's embedded configuration.",
+        "parameters": [
+          {
+            "description": "The dashboard id or slug",
+            "in": "path",
+            "name": "id_or_slug",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successfully removed the configuration"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        },
+        "security": [
+          {
+            "jwt": []
+          }
+        ],
+        "tags": [
+          "Dashboards"
+        ]
+      },
+      "get": {
+        "description": "Returns the dashboard's embedded configuration",
+        "parameters": [
+          {
+            "description": "The dashboard id or slug",
+            "in": "path",
+            "name": "id_or_slug",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "result": {
+                      "$ref": "#/components/schemas/EmbeddedDashboardResponseSchema"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Result contains the embedded dashboard config"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        },
+        "security": [
+          {
+            "jwt": []
+          }
+        ],
+        "tags": [
+          "Dashboards"
+        ]
+      },
+      "post": {
+        "description": "Sets a dashboard's embedded configuration.",
+        "parameters": [
+          {
+            "description": "The dashboard id or slug",
+            "in": "path",
+            "name": "id_or_slug",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmbeddedDashboardConfig"
+              }
+            }
+          },
+          "description": "The embedded configuration to set",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "result": {
+                      "$ref": "#/components/schemas/EmbeddedDashboardResponseSchema"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successfully set the configuration"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        },
+        "security": [
+          {
+            "jwt": []
+          }
+        ],
+        "tags": [
+          "Dashboards"
+        ]
+      },
+      "put": {
+        "description": "Sets a dashboard's embedded configuration.",
+        "parameters": [
+          {
+            "description": "The dashboard id or slug",
+            "in": "path",
+            "name": "id_or_slug",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmbeddedDashboardConfig"
+              }
+            }
+          },
+          "description": "The embedded configuration to set",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "result": {
+                      "$ref": "#/components/schemas/EmbeddedDashboardResponseSchema"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successfully set the configuration"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
           }
         },
         "security": [
@@ -12822,6 +13914,9 @@
             },
             "description": "Thumbnail does not exist on cache, fired async to compute"
           },
+          "302": {
+            "description": "Redirects to the current digest"
+          },
           "401": {
             "$ref": "#/components/responses/401"
           },
@@ -12985,9 +14080,6 @@
             },
             "description": "Database added"
           },
-          "302": {
-            "description": "Redirects to the current digest"
-          },
           "400": {
             "$ref": "#/components/responses/400"
           },
@@ -13121,6 +14213,16 @@
                       "engine": {
                         "description": "Name of the SQLAlchemy engine",
                         "type": "string"
+                      },
+                      "engine_information": {
+                        "description": "Dict with public properties form the DB Engine",
+                        "properties": {
+                          "supports_file_upload": {
+                            "description": "Whether the engine supports file uploads",
+                            "type": "boolean"
+                          }
+                        },
+                        "type": "object"
                       },
                       "name": {
                         "description": "Name of the database",
@@ -13278,7 +14380,7 @@
         ]
       }
     },
-    "/api/v1/database/test_connection": {
+    "/api/v1/database/test_connection/": {
       "post": {
         "description": "Tests a database connection",
         "requestBody": {
@@ -13328,7 +14430,7 @@
         ]
       }
     },
-    "/api/v1/database/validate_parameters": {
+    "/api/v1/database/validate_parameters/": {
       "post": {
         "description": "Validates parameters used to connect to a database",
         "requestBody": {
@@ -13433,26 +14535,16 @@
         ]
       },
       "get": {
-        "description": "Get an item model",
+        "description": "Get a database",
         "parameters": [
           {
+            "description": "The database id",
             "in": "path",
             "name": "pk",
             "required": true,
             "schema": {
               "type": "integer"
             }
-          },
-          {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/get_item_schema"
-                }
-              }
-            },
-            "in": "query",
-            "name": "q"
           }
         ],
         "responses": {
@@ -13460,61 +14552,17 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "properties": {
-                    "description_columns": {
-                      "properties": {
-                        "column_name": {
-                          "description": "The description for the column name. Will be translated by babel",
-                          "example": "A Nice description for the column",
-                          "type": "string"
-                        }
-                      },
-                      "type": "object"
-                    },
-                    "id": {
-                      "description": "The item id",
-                      "type": "string"
-                    },
-                    "label_columns": {
-                      "properties": {
-                        "column_name": {
-                          "description": "The label for the column name. Will be translated by babel",
-                          "example": "A Nice label for the column",
-                          "type": "string"
-                        }
-                      },
-                      "type": "object"
-                    },
-                    "result": {
-                      "$ref": "#/components/schemas/DatabaseRestApi.get"
-                    },
-                    "show_columns": {
-                      "description": "A list of columns",
-                      "items": {
-                        "type": "string"
-                      },
-                      "type": "array"
-                    },
-                    "show_title": {
-                      "description": "A title to render. Will be translated by babel",
-                      "example": "Show Item Details",
-                      "type": "string"
-                    }
-                  },
                   "type": "object"
                 }
               }
             },
-            "description": "Item from Model"
+            "description": "Database"
           },
           "400": {
             "$ref": "#/components/responses/400"
           },
           "401": {
             "$ref": "#/components/responses/401"
-          },
-          "404": {
-            "$ref": "#/components/responses/404"
           },
           "422": {
             "$ref": "#/components/responses/422"
@@ -13888,6 +14936,61 @@
         ]
       }
     },
+    "/api/v1/database/{pk}/ssh_tunnel/": {
+      "delete": {
+        "description": "Deletes a SSH Tunnel.",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "pk",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "SSH Tunnel deleted"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "404": {
+            "$ref": "#/components/responses/404"
+          },
+          "422": {
+            "$ref": "#/components/responses/422"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        },
+        "security": [
+          {
+            "jwt": []
+          }
+        ],
+        "tags": [
+          "Database"
+        ]
+      }
+    },
     "/api/v1/database/{pk}/table/{table_name}/{schema_name}/": {
       "get": {
         "description": "Get database table metadata",
@@ -13952,6 +15055,144 @@
             "jwt": []
           }
         ],
+        "tags": [
+          "Database"
+        ]
+      }
+    },
+    "/api/v1/database/{pk}/table_extra/{table_name}/{schema_name}/": {
+      "get": {
+        "description": "Response depends on each DB engine spec normally focused on partitions",
+        "parameters": [
+          {
+            "description": "The database id",
+            "in": "path",
+            "name": "pk",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Table name",
+            "in": "path",
+            "name": "table_name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Table schema",
+            "in": "path",
+            "name": "schema_name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TableExtraMetadataResponseSchema"
+                }
+              }
+            },
+            "description": "Table extra metadata information"
+          },
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "404": {
+            "$ref": "#/components/responses/404"
+          },
+          "422": {
+            "$ref": "#/components/responses/422"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        },
+        "security": [
+          {
+            "jwt": []
+          }
+        ],
+        "summary": "Get table extra metadata",
+        "tags": [
+          "Database"
+        ]
+      }
+    },
+    "/api/v1/database/{pk}/validate_sql/": {
+      "post": {
+        "description": "Validates arbitrary SQL.",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "pk",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ValidateSQLRequest"
+              }
+            }
+          },
+          "description": "Validate SQL request",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "result": {
+                      "description": "A List of SQL errors found on the statement",
+                      "items": {
+                        "$ref": "#/components/schemas/ValidateSQLResponse"
+                      },
+                      "type": "array"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Validation result"
+          },
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "404": {
+            "$ref": "#/components/responses/404"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        },
+        "security": [
+          {
+            "jwt": []
+          }
+        ],
+        "summary": "Validates that arbitrary sql is acceptable for the given database",
         "tags": [
           "Database"
         ]
@@ -14322,6 +15563,68 @@
         ]
       }
     },
+    "/api/v1/dataset/duplicate": {
+      "post": {
+        "description": "Duplicates a Dataset",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DatasetDuplicateSchema"
+              }
+            }
+          },
+          "description": "Dataset schema",
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "id": {
+                      "type": "number"
+                    },
+                    "result": {
+                      "$ref": "#/components/schemas/DatasetDuplicateSchema"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Dataset duplicated"
+          },
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "404": {
+            "$ref": "#/components/responses/404"
+          },
+          "422": {
+            "$ref": "#/components/responses/422"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        },
+        "security": [
+          {
+            "jwt": []
+          }
+        ],
+        "tags": [
+          "Datasets"
+        ]
+      }
+    },
     "/api/v1/dataset/export/": {
       "get": {
         "description": "Exports multiple datasets and downloads them as YAML files",
@@ -14391,6 +15694,14 @@
                   "passwords": {
                     "description": "JSON map of passwords for each featured database in the ZIP file. If the ZIP includes a database config in the path `databases/MyDatabase.yaml`, the password should be provided in the following format: `{\"databases/MyDatabase.yaml\": \"my_password\"}`.",
                     "type": "string"
+                  },
+                  "sync_columns": {
+                    "description": "sync columns?",
+                    "type": "boolean"
+                  },
+                  "sync_metrics": {
+                    "description": "sync metrics?",
+                    "type": "boolean"
                   }
                 },
                 "type": "object"
@@ -14953,6 +16264,134 @@
         ],
         "tags": [
           "Datasets"
+        ]
+      }
+    },
+    "/api/v1/embedded_dashboard/{uuid}": {
+      "get": {
+        "description": "Get a report schedule log",
+        "parameters": [
+          {
+            "description": "The embedded configuration uuid",
+            "in": "path",
+            "name": "uuid",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "result": {
+                      "$ref": "#/components/schemas/EmbeddedDashboardResponseSchema"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Result contains the embedded dashboard configuration"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "404": {
+            "$ref": "#/components/responses/404"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        },
+        "security": [
+          {
+            "jwt": []
+          }
+        ],
+        "tags": [
+          "Embedded Dashboard"
+        ]
+      }
+    },
+    "/api/v1/explore/": {
+      "get": {
+        "description": "Assembles Explore related information (form_data, slice, dataset)\\n in a single endpoint.<br/><br/>\\nThe information can be assembled from:<br/> - The cache using a form_data_key<br/> - The metadata database using a permalink_key<br/> - Build from scratch using dataset or slice identifiers.",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "form_data_key",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "permalink_key",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "slice_id",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "datasource_id",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "datasource_type",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExploreContextSchema"
+                }
+              }
+            },
+            "description": "Returns the initial context."
+          },
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "404": {
+            "$ref": "#/components/responses/404"
+          },
+          "422": {
+            "$ref": "#/components/responses/422"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        },
+        "security": [
+          {
+            "jwt": []
+          }
+        ],
+        "summary": "Assembles Explore related information (form_data, slice, dataset)\\n in a single endpoint.",
+        "tags": [
+          "Explore"
         ]
       }
     },
@@ -15605,6 +17044,34 @@
         ]
       }
     },
+    "/api/v1/me/roles/": {
+      "get": {
+        "description": "Returns the user roles corresponding to the agent making the request, or returns a 401 error if the user is unauthenticated.",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "result": {
+                      "$ref": "#/components/schemas/UserResponseSchema"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "The current user"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          }
+        },
+        "tags": [
+          "Current User"
+        ]
+      }
+    },
     "/api/v1/menu/": {
       "get": {
         "description": "Get the menu data structure. Returns a forest like structure with the menu the user has access to",
@@ -15884,6 +17351,59 @@
             "jwt": []
           }
         ],
+        "tags": [
+          "Queries"
+        ]
+      }
+    },
+    "/api/v1/query/stop": {
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StopQuerySchema"
+              }
+            }
+          },
+          "description": "Stop query schema",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "result": {
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Query stopped"
+          },
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "404": {
+            "$ref": "#/components/responses/404"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        },
+        "security": [
+          {
+            "jwt": []
+          }
+        ],
+        "summary": "Manually stop a query with client_id",
         "tags": [
           "Queries"
         ]
@@ -16195,6 +17715,9 @@
           },
           "404": {
             "$ref": "#/components/responses/404"
+          },
+          "422": {
+            "$ref": "#/components/responses/422"
           },
           "500": {
             "$ref": "#/components/responses/500"
@@ -16559,6 +18082,9 @@
           },
           "404": {
             "$ref": "#/components/responses/404"
+          },
+          "422": {
+            "$ref": "#/components/responses/422"
           },
           "500": {
             "$ref": "#/components/responses/500"
@@ -17544,6 +19070,9 @@
               }
             },
             "description": "Result contains the guest token"
+          },
+          "400": {
+            "$ref": "#/components/responses/400"
           },
           "401": {
             "$ref": "#/components/responses/401"

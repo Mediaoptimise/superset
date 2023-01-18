@@ -31,33 +31,49 @@ from tests.unit_tests.pandas_postprocessing.utils import series_to_list
 def test_cum_should_not_side_effect():
     _timeseries_df = timeseries_df.copy()
     pp.cum(
-        df=timeseries_df, columns={"y": "y2"}, operator="sum",
+        df=timeseries_df,
+        columns={"y": "y2"},
+        operator="sum",
     )
     assert _timeseries_df.equals(timeseries_df)
 
 
 def test_cum():
     # create new column (cumsum)
-    post_df = pp.cum(df=timeseries_df, columns={"y": "y2"}, operator="sum",)
+    post_df = pp.cum(
+        df=timeseries_df,
+        columns={"y": "y2"},
+        operator="sum",
+    )
     assert post_df.columns.tolist() == ["label", "y", "y2"]
     assert series_to_list(post_df["label"]) == ["x", "y", "z", "q"]
     assert series_to_list(post_df["y"]) == [1.0, 2.0, 3.0, 4.0]
     assert series_to_list(post_df["y2"]) == [1.0, 3.0, 6.0, 10.0]
 
     # overwrite column (cumprod)
-    post_df = pp.cum(df=timeseries_df, columns={"y": "y"}, operator="prod",)
+    post_df = pp.cum(
+        df=timeseries_df,
+        columns={"y": "y"},
+        operator="prod",
+    )
     assert post_df.columns.tolist() == ["label", "y"]
     assert series_to_list(post_df["y"]) == [1.0, 2.0, 6.0, 24.0]
 
     # overwrite column (cummin)
-    post_df = pp.cum(df=timeseries_df, columns={"y": "y"}, operator="min",)
+    post_df = pp.cum(
+        df=timeseries_df,
+        columns={"y": "y"},
+        operator="min",
+    )
     assert post_df.columns.tolist() == ["label", "y"]
     assert series_to_list(post_df["y"]) == [1.0, 1.0, 1.0, 1.0]
 
     # invalid operator
     with pytest.raises(InvalidPostProcessingError):
         pp.cum(
-            df=timeseries_df, columns={"y": "y"}, operator="abc",
+            df=timeseries_df,
+            columns={"y": "y"},
+            operator="abc",
         )
 
 
@@ -67,8 +83,6 @@ def test_cum_after_pivot_with_single_metric():
         index=["dttm"],
         columns=["country"],
         aggregates={"sum_metric": {"operator": "sum"}},
-        flatten_columns=False,
-        reset_index=False,
     )
     """
                sum_metric
@@ -111,8 +125,6 @@ def test_cum_after_pivot_with_multiple_metrics():
             "sum_metric": {"operator": "sum"},
             "count_metric": {"operator": "sum"},
         },
-        flatten_columns=False,
-        reset_index=False,
     )
     """
                    count_metric    sum_metric

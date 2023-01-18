@@ -33,6 +33,7 @@ class AthenaEngineSpec(BaseEngineSpec):
     engine = "awsathena"
     engine_name = "Amazon Athena"
     allows_escaped_colons = False
+    disable_ssh_tunneling = True
 
     _time_grain_expressions = {
         None: "{col}",
@@ -67,10 +68,10 @@ class AthenaEngineSpec(BaseEngineSpec):
     ) -> Optional[str]:
         tt = target_type.upper()
         if tt == utils.TemporalType.DATE:
-            return f"from_iso8601_date('{dttm.date().isoformat()}')"
+            return f"DATE '{dttm.date().isoformat()}'"
         if tt == utils.TemporalType.TIMESTAMP:
-            datetime_formatted = dttm.isoformat(timespec="microseconds")
-            return f"""from_iso8601_timestamp('{datetime_formatted}')"""
+            datetime_formatted = dttm.isoformat(sep=" ", timespec="milliseconds")
+            return f"""TIMESTAMP '{datetime_formatted}'"""
         return None
 
     @classmethod
