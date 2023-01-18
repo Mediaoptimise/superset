@@ -62,7 +62,8 @@ const formatPercentChange = getNumberFormatter(
 export default function transformProps(
   chartProps: BigNumberWithTrendlineChartProps,
 ) {
-  const { width, height, queriesData, formData, rawFormData } = chartProps;
+  const { width, height, queriesData, formData, rawFormData, theme } =
+    chartProps;
   const {
     colorPicker,
     compareLag: compareLag_,
@@ -124,8 +125,10 @@ export default function transformProps(
       if (compareIndex < sortedData.length) {
         const compareValue = sortedData[compareIndex][1];
         // compare values must both be non-nulls
-        if (bigNumber !== null && compareValue !== null && compareValue !== 0) {
-          percentChange = (bigNumber - compareValue) / Math.abs(compareValue);
+        if (bigNumber !== null && compareValue !== null) {
+          percentChange = compareValue
+            ? (bigNumber - compareValue) / Math.abs(compareValue)
+            : 0;
           formattedSubheader = `${formatPercentChange(
             percentChange,
           )} ${compareSuffix}`;
@@ -194,7 +197,7 @@ export default function transformProps(
                 },
                 {
                   offset: 1,
-                  color: 'white',
+                  color: theme.colors.grayscale.light5,
                 },
               ]),
             },
@@ -217,6 +220,7 @@ export default function transformProps(
           bottom: 0,
         },
         tooltip: {
+          appendToBody: true,
           show: true,
           trigger: 'axis',
           confine: true,

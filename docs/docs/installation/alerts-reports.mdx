@@ -126,6 +126,7 @@ SLACK_API_TOKEN = "xoxb-"
 # Email configuration
 SMTP_HOST = "smtp.sendgrid.net" #change to your host
 SMTP_STARTTLS = True
+SMTP_SSL_SERVER_AUTH = True # If your using an SMTP server with a valid certificate
 SMTP_SSL = False
 SMTP_USER = "your_user"
 SMTP_PORT = 2525 # your port eg. 587
@@ -387,7 +388,7 @@ THUMBNAIL_SELENIUM_USER = 'username_with_permission_to_access_dashboards'
 
 ### Schedule Reports
 
-You can optionally allow your users to schedule queries directly in SQL Lab. This is done by addding
+You can optionally allow your users to schedule queries directly in SQL Lab. This is done by adding
 extra metadata to saved queries, which are then picked up by an external scheduled (like
 [Apache Airflow](https://airflow.apache.org/)).
 

@@ -17,7 +17,7 @@
  * under the License.
  */
 import React from 'react';
-import { t, validateNonEmpty, validateInteger } from '@superset-ui/core';
+import { t } from '@superset-ui/core';
 import {
   sharedControls,
   ControlPanelConfig,
@@ -39,7 +39,6 @@ const config: ControlPanelConfig = {
             name: 'groupby',
             config: {
               ...sharedControls.groupby,
-              label: t('Group by'),
               description: t('Columns to group by'),
             },
           },
@@ -75,15 +74,14 @@ const config: ControlPanelConfig = {
       label: t('Chart Options'),
       expanded: true,
       controlSetRows: [
-        [<h1 className="section-header">{t('General')}</h1>],
+        [<div className="section-header">{t('General')}</div>],
         [
           {
             name: 'min_val',
             config: {
               type: 'TextControl',
               isInt: true,
-              default: String(DEFAULT_FORM_DATA.minVal),
-              validators: [validateNonEmpty, validateInteger],
+              default: DEFAULT_FORM_DATA.minVal,
               renderTrigger: true,
               label: t('Min'),
               description: t('Minimum value on the gauge axis'),
@@ -95,7 +93,6 @@ const config: ControlPanelConfig = {
               type: 'TextControl',
               isInt: true,
               default: DEFAULT_FORM_DATA.maxVal,
-              validators: [validateNonEmpty, validateInteger],
               renderTrigger: true,
               label: t('Max'),
               description: t('Maximum value on the gauge axis'),
@@ -197,7 +194,7 @@ const config: ControlPanelConfig = {
             },
           },
         ],
-        [<h1 className="section-header">{t('Axis')}</h1>],
+        [<div className="section-header">{t('Axis')}</div>],
         [
           {
             name: 'show_axis_tick',
@@ -236,7 +233,7 @@ const config: ControlPanelConfig = {
             },
           },
         ],
-        [<h1 className="section-header">{t('Progress')}</h1>],
+        [<div className="section-header">{t('Progress')}</div>],
         [
           {
             name: 'show_progress',
@@ -277,7 +274,7 @@ const config: ControlPanelConfig = {
             },
           },
         ],
-        [<h1 className="section-header">{t('Intervals')}</h1>],
+        [<div className="section-header">{t('Intervals')}</div>],
         [
           {
             name: 'intervals',
@@ -309,6 +306,15 @@ const config: ControlPanelConfig = {
       ],
     },
   ],
+  denormalizeFormData: formData => ({
+    ...formData,
+    metric: formData.standardizedFormData.standardizedState.metrics[0],
+    groupby: formData.standardizedFormData.standardizedState.columns,
+  }),
+  updateStandardizedState: (prevState, currState) => ({
+    ...currState,
+    metrics: [currState.metrics[0], ...prevState.metrics.slice(1)],
+  }),
 };
 
 export default config;

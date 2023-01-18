@@ -158,7 +158,11 @@ class TestDatasource(SupersetTestCase):
 
         # No databases found
         params = prison.dumps(
-            {"datasource_type": "table", "database_name": "foo", "table_name": "bar",}
+            {
+                "datasource_type": "table",
+                "database_name": "foo",
+                "table_name": "bar",
+            }
         )
         url = f"/datasource/external_metadata_by_name/?q={params}"
         resp = self.client.get(url)
@@ -185,7 +189,11 @@ class TestDatasource(SupersetTestCase):
         )
 
         # invalid query params
-        params = prison.dumps({"datasource_type": "table",})
+        params = prison.dumps(
+            {
+                "datasource_type": "table",
+            }
+        )
         url = f"/datasource/external_metadata_by_name/?q={params}"
         resp = self.get_json_resp(url)
         self.assertIn("error", resp)
@@ -270,6 +278,7 @@ class TestDatasource(SupersetTestCase):
 
         datasource_post = get_datasource_post()
         datasource_post["id"] = tbl_id
+        datasource_post["owners"] = [1]
         data = dict(data=json.dumps(datasource_post))
         resp = self.get_json_resp("/datasource/save/", data)
         for k in datasource_post:
@@ -283,6 +292,44 @@ class TestDatasource(SupersetTestCase):
                 print(k)
                 self.assertEqual(resp[k], datasource_post[k])
 
+    def test_save_default_endpoint_validation_fail(self):
+        self.login(username="admin")
+        tbl_id = self.get_table(name="birth_names").id
+
+        datasource_post = get_datasource_post()
+        datasource_post["id"] = tbl_id
+        datasource_post["owners"] = [1]
+        datasource_post["default_endpoint"] = "http://www.google.com"
+        data = dict(data=json.dumps(datasource_post))
+        resp = self.client.post("/datasource/save/", data=data)
+        assert resp.status_code == 400
+
+    def test_save_default_endpoint_validation_unsafe(self):
+        self.app.config["PREVENT_UNSAFE_DEFAULT_URLS_ON_DATASET"] = False
+        self.login(username="admin")
+        tbl_id = self.get_table(name="birth_names").id
+
+        datasource_post = get_datasource_post()
+        datasource_post["id"] = tbl_id
+        datasource_post["owners"] = [1]
+        datasource_post["default_endpoint"] = "http://www.google.com"
+        data = dict(data=json.dumps(datasource_post))
+        resp = self.client.post("/datasource/save/", data=data)
+        assert resp.status_code == 200
+        self.app.config["PREVENT_UNSAFE_DEFAULT_URLS_ON_DATASET"] = True
+
+    def test_save_default_endpoint_validation_success(self):
+        self.login(username="admin")
+        tbl_id = self.get_table(name="birth_names").id
+
+        datasource_post = get_datasource_post()
+        datasource_post["id"] = tbl_id
+        datasource_post["owners"] = [1]
+        datasource_post["default_endpoint"] = "http://localhost/superset/1"
+        data = dict(data=json.dumps(datasource_post))
+        resp = self.client.post("/datasource/save/", data=data)
+        assert resp.status_code == 200
+
     def save_datasource_from_dict(self, datasource_post):
         data = dict(data=json.dumps(datasource_post))
         resp = self.get_json_resp("/datasource/save/", data)
@@ -291,11 +338,14 @@ class TestDatasource(SupersetTestCase):
     @pytest.mark.usefixtures("load_birth_names_dashboard_with_slices")
     def test_change_database(self):
         self.login(username="admin")
+        admin_user = self.get_user("admin")
+
         tbl = self.get_table(name="birth_names")
         tbl_id = tbl.id
         db_id = tbl.database_id
         datasource_post = get_datasource_post()
         datasource_post["id"] = tbl_id
+        datasource_post["owners"] = [admin_user.id]
 
         new_db = self.create_fake_db()
         datasource_post["database"]["id"] = new_db.id
@@ -310,10 +360,12 @@ class TestDatasource(SupersetTestCase):
 
     def test_save_duplicate_key(self):
         self.login(username="admin")
+        admin_user = self.get_user("admin")
         tbl_id = self.get_table(name="birth_names").id
 
         datasource_post = get_datasource_post()
         datasource_post["id"] = tbl_id
+        datasource_post["owners"] = [admin_user.id]
         datasource_post["columns"].extend(
             [
                 {
@@ -338,10 +390,12 @@ class TestDatasource(SupersetTestCase):
 
     def test_get_datasource(self):
         self.login(username="admin")
+        admin_user = self.get_user("admin")
         tbl = self.get_table(name="birth_names")
 
         datasource_post = get_datasource_post()
         datasource_post["id"] = tbl.id
+        datasource_post["owners"] = [admin_user.id]
         data = dict(data=json.dumps(datasource_post))
         self.get_json_resp("/datasource/save/", data)
         url = f"/datasource/get/{tbl.type}/{tbl.id}/"

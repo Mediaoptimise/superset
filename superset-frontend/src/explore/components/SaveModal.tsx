@@ -22,7 +22,6 @@ import { Input } from 'src/components/Input';
 import { Form, FormItem } from 'src/components/Form';
 import Alert from 'src/components/Alert';
 import { JsonObject, t, styled } from '@superset-ui/core';
-import ReactMarkdown from 'react-markdown';
 import Modal from 'src/components/Modal';
 import { Radio } from 'src/components/Radio';
 import Button from 'src/components/Button';
@@ -32,7 +31,6 @@ import { connect } from 'react-redux';
 
 // Session storage key for recent dashboard
 const SK_DASHBOARD_ID = 'save_chart_recent_dashboard';
-const SELECT_PLACEHOLDER = t('**Select** a dashboard OR **create** a new one');
 
 type SaveModalProps = {
   onHide: () => void;
@@ -76,6 +74,11 @@ class SaveModal extends React.Component<SaveModalProps, SaveModalState> {
     this.onSliceNameChange = this.onSliceNameChange.bind(this);
     this.changeAction = this.changeAction.bind(this);
     this.saveOrOverwrite = this.saveOrOverwrite.bind(this);
+    this.isNewDashboard = this.isNewDashboard.bind(this);
+  }
+
+  isNewDashboard(): boolean {
+    return !!(!this.state.saveToDashboardId && this.state.newDashboardName);
   }
 
   canOverwriteSlice(): boolean {
@@ -195,7 +198,9 @@ class SaveModal extends React.Component<SaveModalProps, SaveModalState> {
               }
               onClick={() => this.saveOrOverwrite(true)}
             >
-              {t('Save & go to dashboard')}
+              {this.isNewDashboard()
+                ? t('Save & go to new dashboard')
+                : t('Save & go to dashboard')}
             </Button>
             <Button
               id="btn_modal_save"
@@ -207,6 +212,8 @@ class SaveModal extends React.Component<SaveModalProps, SaveModalState> {
             >
               {!this.canOverwriteSlice() && this.props.slice
                 ? t('Save as new chart')
+                : this.isNewDashboard()
+                ? t('Save to new dashboard')
                 : t('Save')}
             </Button>
           </div>
@@ -247,8 +254,7 @@ class SaveModal extends React.Component<SaveModalProps, SaveModalState> {
               checked={this.state.action === 'saveas'}
               onChange={() => this.changeAction('saveas')}
             >
-              {' '}
-              {t('Save as ...')} &nbsp;
+              {t('Save as...')}
             </Radio>
           </FormItem>
           <hr />
@@ -274,11 +280,12 @@ class SaveModal extends React.Component<SaveModalProps, SaveModalState> {
               onChange={this.onDashboardSelectChange}
               value={dashboardSelectValue || undefined}
               placeholder={
-                // Using markdown to allow for good i18n
-                <ReactMarkdown
-                  source={SELECT_PLACEHOLDER}
-                  renderers={{ paragraph: 'span' }}
-                />
+                <div>
+                  <b>{t('Select')}</b>
+                  {t(' a dashboard OR ')}
+                  <b>{t('create')}</b>
+                  {t(' a new one')}
+                </div>
               }
             />
           </FormItem>
